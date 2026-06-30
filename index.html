@@ -73,6 +73,12 @@
   .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:12px; }
   .badge { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; display:inline-block; background:var(--accent-soft); color:#cdd7ff; }
   .badge.green { background:var(--green-soft); color:var(--green); } .badge.amber { background:var(--amber-soft); color:var(--amber); }
+  .seg { display:inline-flex; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:3px; gap:3px; }
+  .seg button { background:none; border:none; color:var(--muted); padding:7px 16px; border-radius:8px; cursor:pointer; font-size:14px; }
+  .seg button.on { background:var(--accent); color:#fff; font-weight:600; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:4px 10px; font-size:12px; display:inline-flex; align-items:center; gap:6px; }
+  .chip .dot { width:8px; height:8px; border-radius:50%; }
   .section-label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin:12px 0 8px; }
   .empty { text-align:center; color:var(--muted); padding:50px 20px; }
   .empty .big { font-size:42px; margin-bottom:8px; }
@@ -134,7 +140,7 @@
     <div class="nav-item" data-view="dashboard"><span class="ic">🏠</span>Dashboard</div>
     <div class="nav-item" data-view="agenda"><span class="ic">🗓️</span>Agenda / Escala</div>
     <div class="nav-item" data-view="funcionarios"><span class="ic">👥</span>Funcionários</div>
-    <div class="nav-item" data-view="ponto"><span class="ic">🕐</span>Ponto<span class="soon">em breve</span></div>
+    <div class="nav-item" data-view="ponto"><span class="ic">🕐</span>Ponto</div>
     <div class="nav-item" data-view="confirmacoes"><span class="ic">✅</span>Confirmações<span class="soon">em breve</span></div>
     <div class="nav-section">Financeiro</div>
     <div class="nav-item" data-view="banco"><span class="ic">📊</span>Banco de Horas</div>
@@ -237,6 +243,21 @@
     </div>
   </div>
 </div>
+<!-- MODAL ESCALA -->
+<div class="overlay" id="overlayEscala">
+  <div class="modal">
+    <h2 id="escTitulo">Escala</h2>
+    <input type="hidden" id="escId">
+    <div class="hint" id="escSub" style="margin-bottom:12px"></div>
+    <div class="section-label">Quem trabalha neste evento</div>
+    <div id="escRows"></div>
+    <div class="hint">Escolha a função de cada um (ou "não escalado"). Cadastre funções no menu <b>Funções</b>.</div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeEscala()">Cancelar</button>
+      <button class="btn" onclick="salvarEscala()">Salvar escala</button>
+    </div>
+  </div>
+</div>
 
 <script>
 let db = { funcionarios: [], meses: [], disponibilidade: {}, funcoes: [] };
@@ -313,6 +334,7 @@ function renderAtual(){
   else if(viewAtual==='banco') renderRegistro();
   else if(viewAtual==='financeiro') renderFinanceiro();
   else if(viewAtual==='funcoes') renderFuncoes();
+  else if(viewAtual==='ponto') renderPonto();
   else renderEmConstrucao(viewAtual);
 }
 document.querySelectorAll('.nav-item').forEach(t=>t.onclick=()=>navegar(t.dataset.view));
@@ -443,23 +465,55 @@ function excluirDia(){ const mes=mesById(mesAtualId); const id=document.getEleme
 function dispDe(fid){ if(!db.disponibilidade[fid]) db.disponibilidade[fid]={}; return db.disponibilidade[fid]; }
 function disponivel(fid,iso){ return !!(db.disponibilidade[fid]&&db.disponibilidade[fid][iso]); }
 function toggleDisp(fid,iso){ const m=dispDe(fid); if(m[iso]) delete m[iso]; else m[iso]=true; save(); renderAgenda(); }
+let agendaAba='escala';
 function renderAgenda(){
   const cont=document.getElementById('agenda-conteudo');
   if(!db.funcionarios.length){ cont.innerHTML='<div class="empty"><div class="big">👥</div>Cadastre um funcionário primeiro.</div>'; return; }
   if(!db.meses.length){ cont.innerHTML='<div class="empty"><div class="big">📅</div>Nenhum mês cadastrado.</div>'; return; }
   if(!funcById(dispFuncId)) dispFuncId=db.funcionarios[0].id;
   if(!mesById(mesAtualId)) mesAtualId=db.meses[0].id;
-  const mes=mesById(mesAtualId); const f=funcById(dispFuncId);
+  cont.innerHTML=`<div class="toolbar"><div class="seg"><button class="${agendaAba==='escala'?'on':''}" onclick="agendaAba='escala';renderAgenda()">📋 Escala</button><button class="${agendaAba==='disp'?'on':''}" onclick="agendaAba='disp';renderAgenda()">🗓️ Disponibilidade</button></div></div><div id="agenda-box"></div>`;
+  if(agendaAba==='disp') renderDisp('agenda-box'); else renderEscala('agenda-box');
+}
+function renderDisp(boxId){
+  const box=document.getElementById(boxId); const mes=mesById(mesAtualId); const f=funcById(dispFuncId);
   const funcOpts=db.funcionarios.map(x=>`<option value="${x.id}" ${x.id===dispFuncId?'selected':''}>${esc(x.nome)}</option>`).join('');
   const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
   const {ano,mes:mm}=mesAnoDe(mes); const offset=new Date(ano,mm-1,1).getDay(); const nd=new Date(ano,mm,0).getDate();
   let cells=''; for(let i=0;i<offset;i++) cells+='<div class="cal-cell vazio"></div>'; let qtd=0;
   for(let d=1;d<=nd;d++){ const iso=`${ano}-${String(mm).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const on=disponivel(dispFuncId,iso); if(on) qtd++; cells+=`<div class="cal-cell ${on?'on':''}" onclick="toggleDisp('${dispFuncId}','${iso}')">${d}</div>`; }
   const head=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(x=>`<div>${x}</div>`).join('');
-  cont.innerHTML=`<div class="toolbar"><select onchange="dispFuncId=this.value; renderAgenda()">${funcOpts}</select><select onchange="setMes(this.value)">${mesOpts}</select></div>
+  box.innerHTML=`<div class="toolbar"><select onchange="dispFuncId=this.value; renderAgenda()">${funcOpts}</select><select onchange="setMes(this.value)">${mesOpts}</select></div>
     <div class="card" style="border-left:4px solid ${corFunc(f.id)}"><div style="display:flex;align-items:center;gap:10px"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span><div><b>${esc(f.nome)}</b><div class="hint" style="margin:2px 0 0">Toque nos dias que pode trabalhar — <b style="color:var(--green)">${qtd} dia(s)</b> em ${esc(mes.nome)}</div></div></div></div>
-    <div class="cal-head">${head}</div><div class="cal-grid">${cells}</div>
-    <div class="hint">💡 Em breve: além da disponibilidade, montar a <b>escala</b> de quem trabalha em cada evento.</div>`;
+    <div class="cal-head">${head}</div><div class="cal-grid">${cells}</div>`;
+}
+function renderEscala(boxId){
+  const box=document.getElementById(boxId); const mes=mesById(mesAtualId);
+  const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
+  const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  const lista=dias.map(d=>{
+    const arr=(d.escala||[]);
+    const chips=arr.length? arr.map(a=>{ const f=funcById(a.funcId); if(!f) return ''; const fc=db.funcoes.find(x=>x.id===a.funcaoId); return `<span class="chip"><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?` · <b style="color:${fc.cor}">${esc(fc.nome)}</b>`:''}</span>`; }).join('') : '<span class="hint" style="margin:0">Ninguém escalado ainda</span>';
+    return `<div class="card"><div class="card-head" style="align-items:center"><div style="flex:1;min-width:0"><b>${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:2px 0 0">${fmtData(d.data)}</div></div><button class="btn secondary small" onclick="openEscala('${d.id}')">Editar escala</button></div><div class="chips" style="margin-top:10px">${chips}</div></div>`;
+  }).join('');
+  box.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div>`+(dias.length?lista:'<div class="empty"><div class="big">🗓️</div>Nenhum evento neste mês.<br>Crie eventos no <b>Banco de Horas</b> (+ Novo dia).</div>');
+}
+function openEscala(diaId){
+  const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
+  document.getElementById('escId').value=d.id;
+  document.getElementById('escTitulo').textContent='Escala — '+(d.evento||'Evento');
+  document.getElementById('escSub').textContent=fmtData(d.data);
+  const atual={}; (d.escala||[]).forEach(a=>atual[a.funcId]=(a.funcaoId||'__sem__'));
+  const optsFuncao=sel=>`<option value="">— não escalado —</option><option value="__sem__" ${sel==='__sem__'?'selected':''}>Escalado (sem função)</option>`+db.funcoes.map(x=>`<option value="${x.id}" ${sel===x.id?'selected':''}>${esc(x.nome)}</option>`).join('');
+  document.getElementById('escRows').innerHTML=db.funcionarios.map(f=>`<div class="func-row" style="grid-template-columns:1fr 1.2fr"><div class="fn"><span class="avatar" style="width:26px;height:26px;font-size:12px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><select id="esc-${f.id}">${optsFuncao(atual[f.id]||'')}</select></div>`).join('');
+  document.getElementById('overlayEscala').classList.add('open');
+}
+function closeEscala(){ document.getElementById('overlayEscala').classList.remove('open'); }
+document.getElementById('overlayEscala').addEventListener('click',e=>{ if(e.target.id==='overlayEscala') closeEscala(); });
+function salvarEscala(){
+  const mes=mesById(mesAtualId); const id=document.getElementById('escId').value; const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return;
+  const escala=[]; db.funcionarios.forEach(f=>{ const sel=document.getElementById('esc-'+f.id); const v=sel?sel.value:''; if(v) escala.push({funcId:f.id, funcaoId:(v==='__sem__'?'':v)}); });
+  d.escala=escala; save(); closeEscala(); renderAgenda();
 }
 
 /* ---------- Funcionários ---------- */
@@ -528,6 +582,28 @@ function salvarFuncao(){
   save(); closeFuncao(); renderFuncoes();
 }
 function excluirFuncao(){ const id=document.getElementById('fcId').value; if(!confirm('Excluir esta função?')) return; db.funcoes=db.funcoes.filter(x=>x.id!==id); save(); closeFuncao(); renderFuncoes(); }
+
+/* ---------- Ponto ---------- */
+function renderPonto(){
+  const el=document.getElementById('page-ponto'); const mes=mesById(mesAtualId);
+  if(!mes){ el.innerHTML='<div class="empty"><div class="big">🕐</div>Nenhum mês.</div>'; return; }
+  const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
+  const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  const cards=dias.map(d=>{
+    const ids=(d.escala&&d.escala.length)? d.escala.map(a=>a.funcId): db.funcionarios.map(f=>f.id);
+    const rows=ids.map(fid=>{ const f=funcById(fid); if(!f) return ''; const r=regDe(d,fid); const bateu=r.entrada&&r.saida;
+      return `<div class="func-row" style="grid-template-columns:1fr 84px 84px 80px"><div class="fn"><span class="avatar" style="width:24px;height:24px;font-size:11px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'}">${bateu?fmtHoras(r.horas):'falta'}</span></div>`; }).join('');
+    return `<div class="card"><div class="card-head"><div style="flex:1;min-width:0"><b>${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:2px 0 0">${fmtData(d.data)}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="func-row" style="grid-template-columns:1fr 84px 84px 80px;border-top:none"><div class="fn" style="color:var(--muted);font-size:12px">Funcionário</div><div class="cab">Entrada</div><div class="cab">Saída</div><div class="cab">Horas</div></div>${rows}</div>`;
+  }).join('');
+  el.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div><div class="hint" style="margin-bottom:12px">Preencha <b>entrada</b> e <b>saída</b> de cada pessoa por dia — as horas são calculadas e vão para o Banco de Horas. Quando faltam horários, marca <b>"falta"</b>.</div>`+(dias.length?cards:'<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.</div>');
+}
+function setPonto(diaId, fid, campo, val){
+  const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
+  if(!d.reg) d.reg={}; if(!d.reg[fid]) d.reg[fid]={entrada:'',saida:'',horas:0};
+  d.reg[fid][campo]=val;
+  const h=horasEntre(d.reg[fid].entrada,d.reg[fid].saida); if(h!=null) d.reg[fid].horas=h;
+  save(); renderPonto();
+}
 
 /* ---------- Em construção ---------- */
 function renderEmConstrucao(v){
