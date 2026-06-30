@@ -84,8 +84,17 @@
   .empty .big { font-size:42px; margin-bottom:8px; }
   .avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:13px; flex-shrink:0; }
   .pay-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
-  .ponto-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:12px; align-items:start; }
+  .ponto-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(258px,1fr)); gap:12px; align-items:start; }
   .ponto-grid .card { margin-bottom:0; }
+  .pt-card { padding:12px 14px; }
+  .pt-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .pt-row { display:grid; grid-template-columns:1fr 58px 58px 46px; gap:5px; align-items:center; padding:5px 0; border-top:1px solid var(--border); font-size:13px; }
+  .pt-row .nm { display:flex; align-items:center; gap:6px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .pt-row input { width:100%; padding:4px 2px; font-size:12px; text-align:center; }
+  .pt-row input::-webkit-calendar-picker-indicator { display:none; }
+  .pt-row .bd { font-size:10px; padding:2px 0; text-align:center; }
+  .pt-row.pt-cab { border-top:none; color:var(--muted); font-size:11px; text-align:center; }
+  .pt-row.pt-cab span:first-child { text-align:left; }
   .pay-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
   .pay-card .nome { font-weight:600; font-size:16px; display:flex; align-items:center; gap:8px; }
   .pay-card .linha { display:flex; justify-content:space-between; font-size:14px; margin-top:8px; color:var(--muted); }
@@ -594,8 +603,9 @@ function renderPonto(){
   const cards=dias.map(d=>{
     const ids=(d.escala&&d.escala.length)? d.escala.map(a=>a.funcId): db.funcionarios.map(f=>f.id);
     const rows=ids.map(fid=>{ const f=funcById(fid); if(!f) return ''; const r=regDe(d,fid); const bateu=r.entrada&&r.saida;
-      return `<div class="func-row" style="grid-template-columns:1fr 84px 84px 80px"><div class="fn"><span class="avatar" style="width:24px;height:24px;font-size:11px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'}">${bateu?fmtHoras(r.horas):'falta'}</span></div>`; }).join('');
-    return `<div class="card"><div class="card-head"><div style="flex:1;min-width:0"><b>${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:2px 0 0">${fmtData(d.data)}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="func-row" style="grid-template-columns:1fr 84px 84px 80px;border-top:none"><div class="fn" style="color:var(--muted);font-size:12px">Funcionário</div><div class="cab">Entrada</div><div class="cab">Saída</div><div class="cab">Horas</div></div>${rows}</div>`;
+      return `<div class="pt-row"><div class="nm"><span class="avatar" style="width:20px;height:20px;font-size:10px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'} bd">${bateu?fmtHoras(r.horas):'falta'}</span></div>`; }).join('');
+    const p=(d.data||'--').split('-');
+    return `<div class="card pt-card"><div class="pt-head"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:0">${p[2]||'?'}/${p[1]||'?'} · ${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="pt-row pt-cab"><span>Equipe</span><span>Ent</span><span>Saí</span><span>Hrs</span></div>${rows}</div>`;
   }).join('');
   el.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div><div class="hint" style="margin-bottom:12px">Preencha <b>entrada</b> e <b>saída</b> de cada pessoa por dia — as horas são calculadas e vão para o Banco de Horas. Quando faltam horários, marca <b>"falta"</b>.</div>`+(dias.length?('<div class="ponto-grid">'+cards+'</div>'):'<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.</div>');
 }
