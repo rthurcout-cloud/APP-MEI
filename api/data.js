@@ -38,7 +38,8 @@ module.exports = async (req, res) => {
         funcionarios: Array.isArray(body.funcionarios) ? body.funcionarios : [],
         meses: Array.isArray(body.meses) ? body.meses : [],
         disponibilidade: (body.disponibilidade && typeof body.disponibilidade === 'object') ? body.disponibilidade : {},
-        funcoes: Array.isArray(body.funcoes) ? body.funcoes : []
+        funcoes: Array.isArray(body.funcoes) ? body.funcoes : [],
+        config: (body.config && typeof body.config === 'object') ? body.config : {}
       };
       await kv(['SET', DATA_KEY, JSON.stringify(safe)]);
       res.status(200).json({ ok: true });

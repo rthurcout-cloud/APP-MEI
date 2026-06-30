@@ -150,7 +150,7 @@
 <div class="app">
   <div class="backdrop" id="backdrop" onclick="fecharMenu()"></div>
   <aside class="sidebar" id="sidebar">
-    <div class="brand"><span class="logo">🏛️</span><span>Primeira Igreja<br>Batista de Niterói</span></div>
+    <div class="brand"><span class="logo">🏛️</span><span id="brandNome">Primeira Igreja Batista de Niterói</span></div>
     <div class="nav-section">Geral</div>
     <div class="nav-item" data-view="dashboard"><span class="ic">🏠</span>Dashboard</div>
     <div class="nav-item" data-view="agenda"><span class="ic">🗓️</span>Agenda / Escala</div>
@@ -162,8 +162,8 @@
     <div class="nav-item" data-view="relatorios"><span class="ic">📄</span>Relatórios</div>
     <div class="nav-section">Configurações</div>
     <div class="nav-item" data-view="funcoes"><span class="ic">🏷️</span>Funções</div>
-    <div class="nav-item" data-view="config"><span class="ic">⚙️</span>Configurações<span class="soon">em breve</span></div>
-    <div class="user"><div class="av">AD</div><div><div class="nome">Administrador</div><div class="cargo">PIBN</div></div></div>
+    <div class="nav-item" data-view="config"><span class="ic">⚙️</span>Configurações</div>
+    <div class="user"><div class="av" id="userAv">AD</div><div><div class="nome" id="userNome">Administrador</div><div class="cargo" id="userCargo">PIBN</div></div></div>
   </aside>
 
   <div class="content">
@@ -273,13 +273,13 @@
 </div>
 
 <script>
-let db = { funcionarios: [], meses: [], disponibilidade: {}, funcoes: [] };
+let db = { funcionarios: [], meses: [], disponibilidade: {}, funcoes: [], config: {} };
 let mesAtualId = null, dispFuncId = null, mesRelId = null;
 let accessCode = localStorage.getItem('bh-code') || '';
 
 /* ---------- Sincronização ---------- */
 function authHeaders(extra){ return Object.assign({ 'x-access-code': accessCode }, extra||{}); }
-function normalize(d){ return { funcionarios:Array.isArray(d&&d.funcionarios)?d.funcionarios:[], meses:Array.isArray(d&&d.meses)?d.meses:[], disponibilidade:(d&&typeof d.disponibilidade==='object'&&d.disponibilidade)?d.disponibilidade:{}, funcoes:Array.isArray(d&&d.funcoes)?d.funcoes:[] }; }
+function normalize(d){ return { funcionarios:Array.isArray(d&&d.funcionarios)?d.funcionarios:[], meses:Array.isArray(d&&d.meses)?d.meses:[], disponibilidade:(d&&typeof d.disponibilidade==='object'&&d.disponibilidade)?d.disponibilidade:{}, funcoes:Array.isArray(d&&d.funcoes)?d.funcoes:[], config:(d&&typeof d.config==='object'&&d.config)?d.config:{} }; }
 function setSync(state){
   const map={ ok:['✓ Sincronizado','var(--green)'], salvando:['Salvando…','var(--amber)'], erro:['Erro ao salvar','var(--red)'], off:['Sem conexão','var(--muted)'], bloqueado:['Código necessário','var(--red)'], conectando:['Conectando…','var(--muted)'] };
   const [txt,cor]=map[state]||map.conectando;
@@ -349,6 +349,7 @@ function renderAtual(){
   else if(viewAtual==='funcoes') renderFuncoes();
   else if(viewAtual==='ponto') renderPonto();
   else if(viewAtual==='relatorios') renderRelatorios();
+  else if(viewAtual==='config') renderConfig();
   else renderEmConstrucao(viewAtual);
 }
 document.querySelectorAll('.nav-item').forEach(t=>t.onclick=()=>navegar(t.dataset.view));
@@ -660,7 +661,7 @@ function gerarRelatorio(mesId, funcId){
   const mes=mesById(mesId), f=funcById(funcId); if(!mes||!f) return;
   const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).filter(d=>{ const r=regDe(d,funcId); return (+r.horas||0)>0||r.entrada||r.saida; });
   const { jsPDF }=window.jspdf; const doc=new jsPDF();
-  doc.setFontSize(15); doc.text('Primeira Igreja Batista de Niterói', 14, 18);
+  doc.setFontSize(15); doc.text(((db.config&&db.config.igreja)||'Primeira Igreja Batista de Niterói'), 14, 18);
   doc.setFontSize(11); doc.setTextColor(110); doc.text('Relatório de horas trabalhadas', 14, 25);
   doc.setTextColor(0); doc.setFontSize(13); doc.text(`${f.nome}  —  ${mes.nome}`, 14, 34);
   const body=dias.map(d=>{ const r=regDe(d,funcId); const p=(d.data||'--').split('-'); return [ `${p[2]||'?'}/${p[1]||'?'}`, (d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3), d.evento||'', r.entrada||'-', r.saida||'-', fmtHoras(r.horas), d.obs||'' ]; });
@@ -677,6 +678,49 @@ function gerarRelatorio(mesId, funcId){
 }
 function gerarTodos(){ const mes=mesById(mesRelId); if(!mes) return; if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Tente de novo.'); return; } db.funcionarios.forEach((f,i)=>setTimeout(()=>gerarRelatorio(mes.id,f.id), i*500)); }
 
+/* ---------- Configurações ---------- */
+function aplicarIdentidade(){
+  const c=db.config||{};
+  const igreja=c.igreja||'Primeira Igreja Batista de Niterói';
+  const admin=c.admin||'Administrador';
+  const b=document.getElementById('brandNome'); if(b) b.textContent=igreja;
+  const un=document.getElementById('userNome'); if(un) un.textContent=admin;
+  const ua=document.getElementById('userAv'); if(ua) ua.textContent=iniciais(admin);
+  const uc=document.getElementById('userCargo'); if(uc) uc.textContent=igreja.split(/\s+/).map(w=>w[0]||'').join('').slice(0,4).toUpperCase();
+}
+function renderConfig(){
+  const el=document.getElementById('page-config'); const c=db.config||{};
+  el.innerHTML=`
+    <div class="card"><h3 style="margin:0 0 14px;font-size:16px">🏛️ Identidade</h3>
+      <div class="field"><label>Nome da igreja</label><input type="text" id="cfgIgreja" value="${esc(c.igreja||'Primeira Igreja Batista de Niterói')}"></div>
+      <div class="field"><label>Nome do administrador</label><input type="text" id="cfgAdmin" value="${esc(c.admin||'Administrador')}"></div>
+      <button class="btn" onclick="salvarConfig()">Salvar</button>
+      <div class="hint">Aparece na barra lateral e no cabeçalho dos relatórios em PDF.</div>
+    </div>
+    <div class="card"><h3 style="margin:0 0 14px;font-size:16px">🔒 Acesso</h3>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 12px">O código de acesso que protege o app é definido no Vercel (variável <b>ACCESS_CODE</b>). Aqui você pode digitar ou trocar o código guardado neste aparelho.</p>
+      <button class="btn secondary" onclick="trocarCodigo()">Digitar / trocar código</button>
+    </div>
+    <div class="card"><h3 style="margin:0 0 14px;font-size:16px">💾 Backup dos dados</h3>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 12px">Baixe uma cópia de segurança de tudo (funcionários, horas, escala, funções) ou restaure de um arquivo.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn secondary" onclick="exportBackup()">⬇ Baixar backup (.json)</button>
+        <button class="btn secondary" onclick="document.getElementById('impFile').click()">⬆ Restaurar backup</button>
+        <input type="file" id="impFile" accept="application/json" style="display:none" onchange="importBackup(event)">
+      </div>
+    </div>
+    <div class="card"><h3 style="margin:0 0 8px;font-size:16px">ℹ️ Sobre</h3>
+      <p style="color:var(--muted);font-size:13px;margin:0">Sistema de Escala e Horas — PIBN. Dados compartilhados e sincronizados entre dispositivos.</p>
+    </div>`;
+}
+function salvarConfig(){
+  db.config=Object.assign(db.config||{},{ igreja:document.getElementById('cfgIgreja').value.trim(), admin:document.getElementById('cfgAdmin').value.trim() });
+  save(); aplicarIdentidade(); alert('Configurações salvas.');
+}
+function exportBackup(){ const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='backup-banco-horas-pibn.json'; a.click(); }
+function importBackup(ev){ const f=ev.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.funcionarios||!d.meses) throw 0; if(!confirm('Isto vai SUBSTITUIR todos os dados atuais (de todos) pelos do arquivo. Continuar?')) return; db=normalize(d); save(); if(db.meses.length) mesAtualId=db.meses[0].id; aplicarIdentidade(); renderAtual(); alert('Backup restaurado!'); }catch(e){ alert('Arquivo inválido.'); } }; r.readAsText(f); ev.target.value=''; }
+async function trocarCodigo(){ accessCode=''; localStorage.removeItem('bh-code'); const ok=await carregarDoServidor(); if(ok){ if(!mesById(mesAtualId)&&db.meses.length) mesAtualId=db.meses[0].id; aplicarIdentidade(); renderAtual(); } }
+
 /* ---------- Em construção ---------- */
 function renderEmConstrucao(v){
   const el=document.getElementById('page-'+v); const t=TITULOS[v];
@@ -690,6 +734,7 @@ function renderEmConstrucao(v){
   const ok=await carregarDoServidor();
   if(db.meses.length){ const hoje=hojeISO(); const m=db.meses.find(x=>{ const {ano,mes}=mesAnoDe(x); return `${ano}-${String(mes).padStart(2,'0')}`===hoje.slice(0,7); }); mesAtualId=m?m.id:db.meses[0].id; }
   if(db.funcionarios.length) dispFuncId=db.funcionarios[0].id;
+  aplicarIdentidade();
   navegar('dashboard');
   if(ok) setInterval(sincronizarBaixar,8000);
 })();
