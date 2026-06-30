@@ -37,7 +37,8 @@ module.exports = async (req, res) => {
       const safe = {
         funcionarios: Array.isArray(body.funcionarios) ? body.funcionarios : [],
         meses: Array.isArray(body.meses) ? body.meses : [],
-        disponibilidade: (body.disponibilidade && typeof body.disponibilidade === 'object') ? body.disponibilidade : {}
+        disponibilidade: (body.disponibilidade && typeof body.disponibilidade === 'object') ? body.disponibilidade : {},
+        funcoes: Array.isArray(body.funcoes) ? body.funcoes : []
       };
       await kv(['SET', DATA_KEY, JSON.stringify(safe)]);
       res.status(200).json({ ok: true });

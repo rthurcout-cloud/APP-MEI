@@ -141,7 +141,7 @@
     <div class="nav-item" data-view="financeiro"><span class="ic">💰</span>Financeiro</div>
     <div class="nav-item" data-view="relatorios"><span class="ic">📄</span>Relatórios<span class="soon">em breve</span></div>
     <div class="nav-section">Configurações</div>
-    <div class="nav-item" data-view="funcoes"><span class="ic">🏷️</span>Funções<span class="soon">em breve</span></div>
+    <div class="nav-item" data-view="funcoes"><span class="ic">🏷️</span>Funções</div>
     <div class="nav-item" data-view="config"><span class="ic">⚙️</span>Configurações<span class="soon">em breve</span></div>
     <div class="user"><div class="av">AD</div><div><div class="nome">Administrador</div><div class="cargo">PIBN</div></div></div>
   </aside>
@@ -221,15 +221,31 @@
     </div>
   </div>
 </div>
+<!-- MODAL FUNÇÃO -->
+<div class="overlay" id="overlayFuncao">
+  <div class="modal" style="max-width:440px">
+    <h2 id="fcTitulo">Nova função</h2>
+    <input type="hidden" id="fcId">
+    <div class="row">
+      <div class="field" style="flex:2"><label>Nome da função</label><input type="text" id="fcNome" placeholder="Ex: Som, Transmissão, Projeção" onkeydown="if(event.key==='Enter')salvarFuncao()"></div>
+      <div class="field" style="flex:0 0 70px"><label>Cor</label><input type="color" id="fcCor" value="#4f7cff" style="width:100%;height:38px;padding:4px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger" id="btnExcluirFuncao" onclick="excluirFuncao()" style="margin-right:auto;display:none">Excluir</button>
+      <button class="btn secondary" onclick="closeFuncao()">Cancelar</button>
+      <button class="btn" onclick="salvarFuncao()">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <script>
-let db = { funcionarios: [], meses: [], disponibilidade: {} };
+let db = { funcionarios: [], meses: [], disponibilidade: {}, funcoes: [] };
 let mesAtualId = null, dispFuncId = null;
 let accessCode = localStorage.getItem('bh-code') || '';
 
 /* ---------- Sincronização ---------- */
 function authHeaders(extra){ return Object.assign({ 'x-access-code': accessCode }, extra||{}); }
-function normalize(d){ return { funcionarios:Array.isArray(d&&d.funcionarios)?d.funcionarios:[], meses:Array.isArray(d&&d.meses)?d.meses:[], disponibilidade:(d&&typeof d.disponibilidade==='object'&&d.disponibilidade)?d.disponibilidade:{} }; }
+function normalize(d){ return { funcionarios:Array.isArray(d&&d.funcionarios)?d.funcionarios:[], meses:Array.isArray(d&&d.meses)?d.meses:[], disponibilidade:(d&&typeof d.disponibilidade==='object'&&d.disponibilidade)?d.disponibilidade:{}, funcoes:Array.isArray(d&&d.funcoes)?d.funcoes:[] }; }
 function setSync(state){
   const map={ ok:['✓ Sincronizado','var(--green)'], salvando:['Salvando…','var(--amber)'], erro:['Erro ao salvar','var(--red)'], off:['Sem conexão','var(--muted)'], bloqueado:['Código necessário','var(--red)'], conectando:['Conectando…','var(--muted)'] };
   const [txt,cor]=map[state]||map.conectando;
@@ -296,6 +312,7 @@ function renderAtual(){
   else if(viewAtual==='funcionarios') renderFuncionarios();
   else if(viewAtual==='banco') renderRegistro();
   else if(viewAtual==='financeiro') renderFinanceiro();
+  else if(viewAtual==='funcoes') renderFuncoes();
   else renderEmConstrucao(viewAtual);
 }
 document.querySelectorAll('.nav-item').forEach(t=>t.onclick=()=>navegar(t.dataset.view));
@@ -476,6 +493,41 @@ function renderFinanceiro(){
     <tfoot><tr class="receber"><td style="text-align:left">Total — ${esc(mes.nome)}</td><td></td><td>${fmtHoras(totH)}</td><td>${money(totalPagarMes(mes))}</td></tr></tfoot></table></div>
     <div class="hint">Resumo de pagamento do mês selecionado. Em breve: fechamento, recibos e relatórios.</div>`;
 }
+
+/* ---------- Funções (papéis da equipe) ---------- */
+const CORES_FUNC=['#4f7cff','#3ecf8e','#f5b942','#c084fc','#ff6b6b','#22d3ee','#fb7185','#a3e635'];
+function renderFuncoes(){
+  const el=document.getElementById('page-funcoes');
+  const cab=`<div class="toolbar"><button class="btn" onclick="openFuncao()">+ Nova função</button></div>`;
+  if(!db.funcoes.length){
+    el.innerHTML=cab+`<div class="empty"><div class="big">🏷️</div>Nenhuma função cadastrada.<br>Cadastre os papéis da equipe (Som, Transmissão, Projeção...).<br><br><button class="btn" onclick="adicionarFuncoesPadrao()">Adicionar funções comuns</button></div>`;
+    return;
+  }
+  el.innerHTML=cab+'<div class="pay-grid">'+db.funcoes.map(fc=>`<div class="pay-card"><div class="nome"><span class="avatar" style="background:${fc.cor||'#4f7cff'}">${esc(iniciais(fc.nome))}</span>${esc(fc.nome)}</div><div style="margin-top:12px"><button class="btn secondary small" onclick="openFuncao('${fc.id}')">Editar</button></div></div>`).join('')+'</div>'+`<div class="hint">💡 Em breve, na <b>Escala</b>, você vai atribuir essas funções às pessoas em cada evento.</div>`;
+}
+function adicionarFuncoesPadrao(){
+  ['Som','Transmissão','Projeção','Câmera','Recepção'].forEach((n,i)=>{ if(!db.funcoes.some(x=>(x.nome||'').toLowerCase()===n.toLowerCase())) db.funcoes.push({id:uid('fc'),nome:n,cor:CORES_FUNC[i%CORES_FUNC.length]}); });
+  save(); renderFuncoes();
+}
+function openFuncao(id){
+  let fc=null; if(id) fc=db.funcoes.find(x=>x.id===id);
+  document.getElementById('fcTitulo').textContent=fc?'Editar função':'Nova função';
+  document.getElementById('fcId').value=fc?fc.id:'';
+  document.getElementById('fcNome').value=fc?fc.nome:'';
+  document.getElementById('fcCor').value=fc?(fc.cor||'#4f7cff'):CORES_FUNC[db.funcoes.length%CORES_FUNC.length];
+  document.getElementById('btnExcluirFuncao').style.display=fc?'':'none';
+  document.getElementById('overlayFuncao').classList.add('open');
+  setTimeout(()=>document.getElementById('fcNome').focus(),50);
+}
+function closeFuncao(){ document.getElementById('overlayFuncao').classList.remove('open'); }
+document.getElementById('overlayFuncao').addEventListener('click',e=>{ if(e.target.id==='overlayFuncao') closeFuncao(); });
+function salvarFuncao(){
+  const nome=document.getElementById('fcNome').value.trim(); if(!nome){ alert('Digite o nome da função.'); return; }
+  const cor=document.getElementById('fcCor').value; const id=document.getElementById('fcId').value;
+  if(id){ const fc=db.funcoes.find(x=>x.id===id); fc.nome=nome; fc.cor=cor; } else { db.funcoes.push({id:uid('fc'),nome,cor}); }
+  save(); closeFuncao(); renderFuncoes();
+}
+function excluirFuncao(){ const id=document.getElementById('fcId').value; if(!confirm('Excluir esta função?')) return; db.funcoes=db.funcoes.filter(x=>x.id!==id); save(); closeFuncao(); renderFuncoes(); }
 
 /* ---------- Em construção ---------- */
 function renderEmConstrucao(v){
