@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="PIBN Escala">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
     --bg:#0b1020; --surface:#161b2e; --surface-2:#1e2740; --border:#2a3450;
@@ -157,7 +159,7 @@
     <div class="nav-section">Financeiro</div>
     <div class="nav-item" data-view="banco"><span class="ic">📊</span>Banco de Horas</div>
     <div class="nav-item" data-view="financeiro"><span class="ic">💰</span>Financeiro</div>
-    <div class="nav-item" data-view="relatorios"><span class="ic">📄</span>Relatórios<span class="soon">em breve</span></div>
+    <div class="nav-item" data-view="relatorios"><span class="ic">📄</span>Relatórios</div>
     <div class="nav-section">Configurações</div>
     <div class="nav-item" data-view="funcoes"><span class="ic">🏷️</span>Funções</div>
     <div class="nav-item" data-view="config"><span class="ic">⚙️</span>Configurações<span class="soon">em breve</span></div>
@@ -272,7 +274,7 @@
 
 <script>
 let db = { funcionarios: [], meses: [], disponibilidade: {}, funcoes: [] };
-let mesAtualId = null, dispFuncId = null;
+let mesAtualId = null, dispFuncId = null, mesRelId = null;
 let accessCode = localStorage.getItem('bh-code') || '';
 
 /* ---------- Sincronização ---------- */
@@ -346,6 +348,7 @@ function renderAtual(){
   else if(viewAtual==='financeiro') renderFinanceiro();
   else if(viewAtual==='funcoes') renderFuncoes();
   else if(viewAtual==='ponto') renderPonto();
+  else if(viewAtual==='relatorios') renderRelatorios();
   else renderEmConstrucao(viewAtual);
 }
 document.querySelectorAll('.nav-item').forEach(t=>t.onclick=()=>navegar(t.dataset.view));
@@ -633,6 +636,46 @@ function setPonto(diaId, fid, campo, val){
   const h=horasEntre(d.reg[fid].entrada,d.reg[fid].saida); if(h!=null) d.reg[fid].horas=h;
   save(); renderPonto();
 }
+
+/* ---------- Relatórios (PDF por pessoa) ---------- */
+function renderRelatorios(){
+  const el=document.getElementById('page-relatorios');
+  if(!db.meses.length||!db.funcionarios.length){ el.innerHTML='<div class="empty"><div class="big">📄</div>Cadastre meses e funcionários primeiro.</div>'; return; }
+  if(!mesById(mesRelId)) mesRelId=(mesById(mesAtualId)?mesAtualId:db.meses[0].id);
+  const mes=mesById(mesRelId);
+  const mesOpts=db.meses.map(m=>`<option value="${m.id}" ${m.id===mesRelId?'selected':''}>${esc(m.nome)}</option>`).join('');
+  const cards=db.funcionarios.map(f=>{ const h=horasFuncMes(mes,f.id); const dt=(mes.dias||[]).filter(d=>(+regDe(d,f.id).horas||0)>0).length;
+    return `<div class="pay-card"><div class="nome"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div>
+      <div class="linha"><span>Dias trabalhados</span><b style="color:var(--text)">${dt}</b></div>
+      <div class="linha"><span>Horas em ${esc(mes.nome)}</span><b style="color:var(--text)">${fmtHoras(h)}</b></div>
+      <div class="linha" style="margin-top:6px"><span>A receber</span><b class="total">${money(h*(+f.valorHora||0))}</b></div>
+      <div style="margin-top:12px"><button class="btn" onclick="gerarRelatorio('${mes.id}','${f.id}')">📄 Gerar PDF</button></div></div>`;
+  }).join('');
+  el.innerHTML=`<div class="toolbar"><select onchange="mesRelId=this.value; renderRelatorios()">${mesOpts}</select><button class="btn secondary" onclick="gerarTodos()">📄 PDF de todos</button></div>
+    <div class="hint" style="margin-bottom:14px">Gera um PDF por pessoa com os dias trabalhados, horários, observações, total de horas e valor a receber. O arquivo sai como <b>"Mês de Junho - Nathan.pdf"</b>.</div>
+    <div class="pay-grid">${cards}</div>`;
+}
+function gerarRelatorio(mesId, funcId){
+  if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Aguarde 1-2 segundos e tente de novo.'); return; }
+  const mes=mesById(mesId), f=funcById(funcId); if(!mes||!f) return;
+  const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).filter(d=>{ const r=regDe(d,funcId); return (+r.horas||0)>0||r.entrada||r.saida; });
+  const { jsPDF }=window.jspdf; const doc=new jsPDF();
+  doc.setFontSize(15); doc.text('Primeira Igreja Batista de Niterói', 14, 18);
+  doc.setFontSize(11); doc.setTextColor(110); doc.text('Relatório de horas trabalhadas', 14, 25);
+  doc.setTextColor(0); doc.setFontSize(13); doc.text(`${f.nome}  —  ${mes.nome}`, 14, 34);
+  const body=dias.map(d=>{ const r=regDe(d,funcId); const p=(d.data||'--').split('-'); return [ `${p[2]||'?'}/${p[1]||'?'}`, (d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3), d.evento||'', r.entrada||'-', r.saida||'-', fmtHoras(r.horas), d.obs||'' ]; });
+  let totH=0; dias.forEach(d=>totH+=(+regDe(d,funcId).horas||0)); const valor=totH*(+f.valorHora||0);
+  doc.autoTable({ startY:40, head:[['Data','Dia','Evento','Entrada','Saída','Horas','Observação']], body: body.length?body:[['—','—','sem registros neste mês','—','—','—','—']], styles:{fontSize:9,cellPadding:2.2}, headStyles:{fillColor:[79,124,255]}, columnStyles:{6:{cellWidth:42}} });
+  let y=(doc.lastAutoTable?doc.lastAutoTable.finalY:50)+12;
+  doc.setFontSize(12); doc.setTextColor(0);
+  doc.text(`Total de horas trabalhadas: ${fmtHoras(totH)}`, 14, y);
+  doc.text(`Valor por hora: ${money(f.valorHora)}`, 14, y+7);
+  doc.setTextColor(20,120,70); doc.setFontSize(13); doc.text(`Total a receber: ${money(valor)}`, 14, y+15);
+  doc.setTextColor(150); doc.setFontSize(8.5); doc.text(`Gerado em ${dataExtenso()}`, 14, 287);
+  const nomeArq=`Mês de ${(mes.nome||'').replace(/\s*\d{4}/,'').trim()} - ${f.nome}.pdf`;
+  doc.save(nomeArq);
+}
+function gerarTodos(){ const mes=mesById(mesRelId); if(!mes) return; if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Tente de novo.'); return; } db.funcionarios.forEach((f,i)=>setTimeout(()=>gerarRelatorio(mes.id,f.id), i*500)); }
 
 /* ---------- Em construção ---------- */
 function renderEmConstrucao(v){
