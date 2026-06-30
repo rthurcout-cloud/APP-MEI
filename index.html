@@ -36,18 +36,18 @@
   .tab { padding:8px 14px; border-radius:8px; cursor:pointer; color:var(--muted); border:1px solid transparent; background:none; font-size:14px; }
   .tab:hover { background:var(--surface-2); color:var(--text); }
   .tab.active { background:var(--accent-soft); color:#fff; border-color:var(--accent); }
-  .home-menu { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; max-width:760px; margin:7vh auto 0; }
-  .home-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:40px 16px; background:var(--surface); border:1px solid var(--border); border-radius:18px; color:var(--text); cursor:pointer; font-size:18px; font-weight:600; transition:transform .12s,border-color .12s,background .12s; }
-  .home-btn:hover { border-color:var(--accent); transform:translateY(-3px); background:var(--surface-2); }
-  .home-btn .ico { font-size:42px; line-height:1; }
-  @media (max-width:560px){ .home-menu{ grid-template-columns:1fr; gap:12px; margin-top:3vh; } .home-btn{ flex-direction:row; justify-content:flex-start; gap:18px; padding:22px 24px; } .home-btn .ico{ font-size:32px; } }
+  /* Menu inicial — vertical */
+  .home-menu { display:flex; flex-direction:column; gap:14px; max-width:520px; margin:6vh auto 0; }
+  .home-btn { display:flex; flex-direction:row; align-items:center; gap:18px; padding:24px 26px; background:var(--surface); border:1px solid var(--border); border-radius:16px; color:var(--text); cursor:pointer; font-size:18px; font-weight:600; text-align:left; transition:transform .12s,border-color .12s,background .12s; }
+  .home-btn:hover { border-color:var(--accent); transform:translateY(-2px); background:var(--surface-2); }
+  .home-btn .ico { font-size:34px; line-height:1; flex-shrink:0; }
+  .home-btn .sub { display:block; font-size:13px; font-weight:400; color:var(--muted); margin-top:2px; }
   .toolbar { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
   input,select,textarea { background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:8px; font-size:16px; font-family:inherit; }
   input:focus,select:focus,textarea:focus { outline:none; border-color:var(--accent); }
   .btn { background:var(--accent); color:#fff; border:none; padding:9px 16px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; }
   .btn:hover { filter:brightness(1.1); }
   .btn.secondary { background:var(--surface-2); border:1px solid var(--border); color:var(--text); font-weight:500; }
-  .btn.ghost { background:none; border:1px solid var(--border); color:var(--muted); }
   .btn.danger { background:var(--red-soft); color:var(--red); border:1px solid var(--red); }
   .btn.small { padding:5px 10px; font-size:13px; }
   .stats { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
@@ -64,7 +64,7 @@
   .chip.zero { opacity:.45; }
   .chip .dot { width:8px; height:8px; border-radius:50%; }
   .badge { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; display:inline-block; background:var(--accent-soft); color:#cdd7ff; }
-  .section-label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin:12px 0 4px; }
+  .section-label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin:12px 0 8px; }
   .empty { text-align:center; color:var(--muted); padding:60px 20px; }
   .empty .big { font-size:42px; margin-bottom:8px; }
   .pay-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
@@ -73,6 +73,13 @@
   .pay-card .linha { display:flex; justify-content:space-between; font-size:14px; margin-top:8px; color:var(--muted); }
   .pay-card .total { font-size:22px; font-weight:700; color:var(--green); margin-top:10px; }
   .avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:14px; flex-shrink:0; }
+  /* Calendário */
+  .cal-head, .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .cal-head div { text-align:center; color:var(--muted); font-size:12px; padding:4px 0; }
+  .cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:var(--surface); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-size:14px; user-select:none; }
+  .cal-cell.vazio { background:none; border:none; cursor:default; }
+  .cal-cell.on { background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700; }
+  .cal-cell:not(.vazio):active { transform:scale(.93); }
   /* Modal */
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:flex-start; justify-content:center; z-index:50; overflow-y:auto; padding:40px 16px; }
   .overlay.open { display:flex; }
@@ -100,23 +107,23 @@
   <h1 onclick="navegar('home')" title="Voltar ao início">⏱️ Banco de Horas PIBN</h1>
   <span id="sync" class="sync">conectando…</span>
   <div class="tabs">
-    <button class="tab" data-view="registro">📅 Registro</button>
-    <button class="tab" data-view="pagamento">💰 Pagamento</button>
+    <button class="tab" data-view="registro">⏱️ Horários</button>
+    <button class="tab" data-view="agenda">📅 Agenda</button>
     <button class="tab" data-view="funcionarios">👥 Funcionários</button>
   </div>
 </header>
 
 <main>
-  <!-- INÍCIO -->
+  <!-- INÍCIO (menu vertical) -->
   <div id="view-home">
     <div class="home-menu">
-      <button class="home-btn" onclick="navegar('registro')"><span class="ico">📅</span>Registro</button>
-      <button class="home-btn" onclick="navegar('pagamento')"><span class="ico">💰</span>Pagamento</button>
-      <button class="home-btn" onclick="navegar('funcionarios')"><span class="ico">👥</span>Funcionários</button>
+      <button class="home-btn" onclick="navegar('registro')"><span class="ico">⏱️</span><span>Preencher horários<span class="sub">Lançar as horas trabalhadas</span></span></button>
+      <button class="home-btn" onclick="navegar('agenda')"><span class="ico">📅</span><span>Agenda<span class="sub">Marcar os dias que cada um pode trabalhar</span></span></button>
+      <button class="home-btn" onclick="navegar('funcionarios')"><span class="ico">👥</span><span>Dados dos funcionários<span class="sub">Cadastro, valor/hora e pagamento</span></span></button>
     </div>
   </div>
 
-  <!-- REGISTRO -->
+  <!-- PREENCHER HORÁRIOS -->
   <div id="view-registro" style="display:none">
     <div class="toolbar">
       <select id="mesRegistro" onchange="setMes(this.value)"></select>
@@ -126,18 +133,16 @@
     <div id="lista-dias"></div>
   </div>
 
-  <!-- PAGAMENTO -->
-  <div id="view-pagamento" style="display:none">
-    <div class="toolbar">
-      <select id="mesPagamento" onchange="setMes(this.value)"></select>
-    </div>
-    <div id="pagamento-conteudo"></div>
+  <!-- AGENDA / DISPONIBILIDADE -->
+  <div id="view-agenda" style="display:none">
+    <div id="agenda-conteudo"></div>
   </div>
 
   <!-- FUNCIONÁRIOS -->
   <div id="view-funcionarios" style="display:none">
     <div class="toolbar">
       <button class="btn" onclick="openFunc()">+ Novo funcionário</button>
+      <select id="mesFunc" onchange="setMes(this.value)"></select>
     </div>
     <div id="lista-funcionarios"></div>
   </div>
@@ -182,20 +187,24 @@
 </div>
 
 <script>
-let db = { funcionarios: [], meses: [] };
+let db = { funcionarios: [], meses: [], disponibilidade: {} };
 let mesAtualId = null;
+let dispFuncId = null;
 let accessCode = localStorage.getItem('bh-code') || '';
 
 /* ---------- Sincronização ---------- */
 function authHeaders(extra){ return Object.assign({ 'x-access-code': accessCode }, extra||{}); }
-function normalize(d){ return { funcionarios: Array.isArray(d&&d.funcionarios)?d.funcionarios:[], meses: Array.isArray(d&&d.meses)?d.meses:[] }; }
+function normalize(d){ return {
+  funcionarios: Array.isArray(d&&d.funcionarios)?d.funcionarios:[],
+  meses: Array.isArray(d&&d.meses)?d.meses:[],
+  disponibilidade: (d&&typeof d.disponibilidade==='object'&&d.disponibilidade)?d.disponibilidade:{}
+}; }
 function setSync(state){
   const el=document.getElementById('sync');
   const map={ ok:['✓ Sincronizado','var(--green)'], salvando:['Salvando…','var(--amber)'], erro:['Erro ao salvar','var(--red)'], off:['Sem conexão','var(--muted)'], bloqueado:['Código necessário','var(--red)'], conectando:['Conectando…','var(--muted)'] };
   const [txt,cor]=map[state]||map.conectando; el.textContent=txt; el.style.color=cor; el.style.borderColor=cor;
 }
 function pedirCodigo(msg){ const c=window.prompt(msg||'Digite o código de acesso:'); if(c===null) return false; accessCode=c.trim(); localStorage.setItem('bh-code',accessCode); return true; }
-
 async function carregarDoServidor(){
   setSync('conectando');
   while(true){
@@ -227,7 +236,7 @@ async function sincronizarBaixar(){
   if(JSON.stringify(novo)!==JSON.stringify(db)){ db=novo; if(!mesById(mesAtualId)) mesAtualId=db.meses[0]?db.meses[0].id:null; renderTudo(); }
   setSync('ok');
 }
-function renderTudo(){ popularSelectsMes(); renderRegistro(); renderPagamento(); renderFuncionarios(); }
+function renderTudo(){ popularSelectsMes(); renderRegistro(); renderAgenda(); renderFuncionarios(); }
 function uid(p){ return (p||'id')+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36); }
 
 /* ---------- Helpers ---------- */
@@ -249,23 +258,22 @@ function totalPagarMes(mes){ return db.funcionarios.reduce((s,f)=>s+horasFuncMes
 
 /* ---------- Navegação ---------- */
 function navegar(v){
-  ['home','registro','pagamento','funcionarios'].forEach(n=>{ const el=document.getElementById('view-'+n); if(el) el.style.display=(n===v)?'':'none'; });
+  ['home','registro','agenda','funcionarios'].forEach(n=>{ const el=document.getElementById('view-'+n); if(el) el.style.display=(n===v)?'':'none'; });
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
   if(v==='registro') renderRegistro();
-  if(v==='pagamento') renderPagamento();
+  if(v==='agenda') renderAgenda();
   if(v==='funcionarios') renderFuncionarios();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>navegar(t.dataset.view));
-
 function popularSelectsMes(){
   if(!mesById(mesAtualId)) mesAtualId = db.meses.length? db.meses[0].id : null;
   const opts = db.meses.map(m=>`<option value="${m.id}" ${m.id===mesAtualId?'selected':''}>${esc(m.nome)}</option>`).join('');
-  ['mesRegistro','mesPagamento'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
+  ['mesRegistro','mesFunc'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
 }
-function setMes(id){ mesAtualId=id; popularSelectsMes(); renderRegistro(); renderPagamento(); }
+function setMes(id){ mesAtualId=id; popularSelectsMes(); renderRegistro(); renderFuncionarios(); renderAgenda(); }
 
-/* ---------- Registro ---------- */
+/* ---------- Preencher horários (Registro) ---------- */
 function renderRegistro(){
   const mes=mesById(mesAtualId);
   const stats=document.getElementById('statsRegistro');
@@ -348,46 +356,53 @@ function salvarDia(){
   if(!mes.dias) mes.dias=[];
   if(id){ const d=mes.dias.find(x=>x.id===id); Object.assign(d,obj); }
   else { obj.id=uid('d'); mes.dias.push(obj); }
-  save(); closeDia(); renderRegistro(); renderPagamento();
+  save(); closeDia(); renderRegistro(); renderFuncionarios();
 }
 function excluirDia(){
   const mes=mesById(mesAtualId); const id=document.getElementById('dId').value;
   if(!confirm('Excluir este dia?')) return;
   mes.dias=(mes.dias||[]).filter(x=>x.id!==id);
-  save(); closeDia(); renderRegistro(); renderPagamento();
+  save(); closeDia(); renderRegistro(); renderFuncionarios();
 }
 
-/* ---------- Pagamento ---------- */
-function renderPagamento(){
-  const cont=document.getElementById('pagamento-conteudo');
-  const mes=mesById(mesAtualId);
-  if(!mes){ cont.innerHTML='<div class="empty"><div class="big">💰</div>Nenhum mês cadastrado.</div>'; return; }
-  const cards=db.funcionarios.map(f=>{
-    const h=horasFuncMes(mes,f.id); const total=h*(+f.valorHora||0);
-    return `<div class="pay-card">
-      <div class="nome"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div>
-      <div class="linha"><span>Horas no mês</span><b style="color:var(--text)">${fmtHoras(h)}</b></div>
-      <div class="linha"><span>Valor/hora</span><b style="color:var(--text)">${money(f.valorHora)}</b></div>
-      <div class="total">${money(total)}</div>
-    </div>`;
-  }).join('');
-  const totalMes=totalPagarMes(mes);
-  // total do ano por funcionário
-  const anoLinhas=db.funcionarios.map(f=>{
-    let h=0; db.meses.forEach(m=>h+=horasFuncMes(m,f.id));
-    return `<div class="linha"><span><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${corFunc(f.id)};margin-right:6px"></span>${esc(f.nome)}</span><b style="color:var(--text)">${fmtHoras(h)} · ${money(h*(+f.valorHora||0))}</b></div>`;
-  }).join('');
+/* ---------- Agenda / Disponibilidade ---------- */
+const MESES_PT={janeiro:1,fevereiro:2,'março':3,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+function mesAnoDe(mes){ if(mes.dias&&mes.dias[0]&&mes.dias[0].data){ const p=mes.dias[0].data.split('-'); return {ano:+p[0],mes:+p[1]}; } const t=(mes.nome||'').toLowerCase().split(/\s+/); return {ano:+(t[1]||2026), mes:(MESES_PT[t[0]]||1)}; }
+function dispDe(fid){ if(!db.disponibilidade[fid]) db.disponibilidade[fid]={}; return db.disponibilidade[fid]; }
+function disponivel(fid,iso){ return !!(db.disponibilidade[fid]&&db.disponibilidade[fid][iso]); }
+function toggleDisp(fid,iso){ const m=dispDe(fid); if(m[iso]) delete m[iso]; else m[iso]=true; save(); renderAgenda(); }
+function renderAgenda(){
+  const cont=document.getElementById('agenda-conteudo');
+  if(!db.funcionarios.length){ cont.innerHTML='<div class="empty"><div class="big">👥</div>Cadastre um funcionário primeiro.</div>'; return; }
+  if(!db.meses.length){ cont.innerHTML='<div class="empty"><div class="big">📅</div>Nenhum mês cadastrado.</div>'; return; }
+  if(!funcById(dispFuncId)) dispFuncId=db.funcionarios[0].id;
+  if(!mesById(mesAtualId)) mesAtualId=db.meses[0].id;
+  const mes=mesById(mesAtualId); const f=funcById(dispFuncId);
+  const funcOpts=db.funcionarios.map(x=>`<option value="${x.id}" ${x.id===dispFuncId?'selected':''}>${esc(x.nome)}</option>`).join('');
+  const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
+  const {ano,mes:mm}=mesAnoDe(mes);
+  const offset=new Date(ano,mm-1,1).getDay();
+  const nd=new Date(ano,mm,0).getDate();
+  let cells=''; for(let i=0;i<offset;i++) cells+='<div class="cal-cell vazio"></div>';
+  let qtd=0;
+  for(let d=1;d<=nd;d++){ const iso=`${ano}-${String(mm).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const on=disponivel(dispFuncId,iso); if(on) qtd++; cells+=`<div class="cal-cell ${on?'on':''}" onclick="toggleDisp('${dispFuncId}','${iso}')">${d}</div>`; }
+  const head=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(x=>`<div>${x}</div>`).join('');
   cont.innerHTML=`
-    <div class="stats">
-      <div class="stat"><div class="num" style="color:var(--green)">${money(totalMes)}</div><div class="lbl">Total a pagar — ${esc(mes.nome)}</div></div>
+    <div class="toolbar">
+      <select onchange="dispFuncId=this.value; renderAgenda()">${funcOpts}</select>
+      <select onchange="setMes(this.value)">${mesOpts}</select>
     </div>
-    <div class="section-label">Por funcionário — ${esc(mes.nome)}</div>
-    <div class="pay-grid">${cards}</div>
-    <div class="section-label" style="margin-top:22px">Acumulado do ano (todos os meses)</div>
-    <div class="card" style="border-left-color:var(--green)">${anoLinhas}</div>`;
+    <div class="card" style="border-left-color:${corFunc(f.id)}">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>
+        <div><b>${esc(f.nome)}</b><div class="hint" style="margin:2px 0 0">Toque nos dias que pode trabalhar — <b style="color:var(--green)">${qtd} dia(s)</b> em ${esc(mes.nome)}</div></div>
+      </div>
+    </div>
+    <div class="cal-head">${head}</div>
+    <div class="cal-grid">${cells}</div>`;
 }
 
-/* ---------- Funcionários ---------- */
+/* ---------- Funcionários (+ pagamento) ---------- */
 function openFunc(id){
   let f=null; if(id) f=funcById(id);
   document.getElementById('funcTitulo').textContent=f?'Editar funcionário':'Novo funcionário';
@@ -418,13 +433,18 @@ function excluirFunc(){
 function renderFuncionarios(){
   const el=document.getElementById('lista-funcionarios');
   if(!db.funcionarios.length){ el.innerHTML='<div class="empty"><div class="big">👥</div>Nenhum funcionário.<br>Clique em <b>+ Novo funcionário</b>.</div>'; return; }
+  const mes=mesById(mesAtualId); const nomeMes=mes?mes.nome:'';
   el.innerHTML='<div class="pay-grid">'+db.funcionarios.map(f=>{
+    const hMes=mes?horasFuncMes(mes,f.id):0; const pagar=hMes*(+f.valorHora||0);
     let hAno=0; db.meses.forEach(m=>hAno+=horasFuncMes(m,f.id));
     return `<div class="pay-card">
       <div class="nome"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div>
       <div class="linha"><span>Valor/hora</span><b style="color:var(--text)">${money(f.valorHora)}</b></div>
+      <div class="linha"><span>Horas em ${esc(nomeMes)}</span><b style="color:var(--text)">${fmtHoras(hMes)}</b></div>
       <div class="linha"><span>Horas no ano</span><b style="color:var(--text)">${fmtHoras(hAno)}</b></div>
-      <div style="margin-top:12px"><button class="btn secondary small" onclick="openFunc('${f.id}')">Editar</button></div>
+      <div class="total">${money(pagar)}</div>
+      <div class="linha" style="margin-top:4px"><span>a pagar em ${esc(nomeMes)}</span></div>
+      <div style="margin-top:10px"><button class="btn secondary small" onclick="openFunc('${f.id}')">Editar</button></div>
     </div>`;
   }).join('')+'</div>';
 }
@@ -433,6 +453,7 @@ function renderFuncionarios(){
 (async function boot(){
   const ok=await carregarDoServidor();
   if(db.meses.length) mesAtualId=db.meses[0].id;
+  if(db.funcionarios.length) dispFuncId=db.funcionarios[0].id;
   renderTudo();
   if(ok) setInterval(sincronizarBaixar,8000);
 })();

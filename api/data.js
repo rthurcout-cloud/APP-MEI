@@ -36,7 +36,8 @@ module.exports = async (req, res) => {
       if (!body || typeof body !== 'object') { res.status(400).json({ error: 'body_invalido' }); return; }
       const safe = {
         funcionarios: Array.isArray(body.funcionarios) ? body.funcionarios : [],
-        meses: Array.isArray(body.meses) ? body.meses : []
+        meses: Array.isArray(body.meses) ? body.meses : [],
+        disponibilidade: (body.disponibilidade && typeof body.disponibilidade === 'object') ? body.disponibilidade : {}
       };
       await kv(['SET', DATA_KEY, JSON.stringify(safe)]);
       res.status(200).json({ ok: true });
