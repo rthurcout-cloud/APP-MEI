@@ -442,9 +442,8 @@ function renderFuncionarios(){
       <div class="linha"><span>Valor/hora</span><b style="color:var(--text)">${money(f.valorHora)}</b></div>
       <div class="linha"><span>Horas em ${esc(nomeMes)}</span><b style="color:var(--text)">${fmtHoras(hMes)}</b></div>
       <div class="linha"><span>Horas no ano</span><b style="color:var(--text)">${fmtHoras(hAno)}</b></div>
-      <div class="total">${money(pagar)}</div>
-      <div class="linha" style="margin-top:4px"><span>a pagar em ${esc(nomeMes)}</span></div>
-      <div style="margin-top:10px"><button class="btn secondary small" onclick="openFunc('${f.id}')">Editar</button></div>
+      <div class="linha" style="margin-top:6px"><span>A pagar em ${esc(nomeMes)}</span><b class="total" style="margin:0">${money(pagar)}</b></div>
+      <div style="margin-top:12px"><button class="btn secondary small" onclick="openFunc('${f.id}')">Editar</button></div>
     </div>`;
   }).join('')+'</div>';
 }
