@@ -191,7 +191,6 @@
         <div id="planilha-conteudo"></div>
       </section>
       <section id="page-financeiro" class="page" style="display:none">
-        <div class="toolbar"><select id="mesFin" onchange="setMes(this.value)"></select></div>
         <div id="financeiro-conteudo"></div>
       </section>
       <section id="page-ponto" class="page" style="display:none"></section>
@@ -555,13 +554,26 @@ function renderFuncionarios(){
 
 /* ---------- Financeiro ---------- */
 function renderFinanceiro(){
-  const cont=document.getElementById('financeiro-conteudo'); const mes=mesById(mesAtualId);
-  if(!mes){ cont.innerHTML='<div class="empty"><div class="big">💰</div>Nenhum mês.</div>'; return; }
-  const linhas=db.funcionarios.map(f=>{ const h=horasFuncMes(mes,f.id); return `<tr><td class="dia"><span class="avatar" style="width:24px;height:24px;font-size:11px;display:inline-flex;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span> ${esc(f.nome)}</td><td>${money(f.valorHora)}</td><td>${fmtHoras(h)}</td><td class="tot">${money(h*(+f.valorHora||0))}</td></tr>`; }).join('');
-  const totH=db.funcionarios.reduce((s,f)=>s+horasFuncMes(mes,f.id),0);
-  cont.innerHTML=`<div class="tbl-wrap"><table class="planilha"><thead><tr><th style="text-align:left">Funcionário</th><th>Valor/hora</th><th>Horas</th><th>A pagar</th></tr></thead><tbody>${linhas}</tbody>
-    <tfoot><tr class="receber"><td style="text-align:left">Total — ${esc(mes.nome)}</td><td></td><td>${fmtHoras(totH)}</td><td>${money(totalPagarMes(mes))}</td></tr></tfoot></table></div>
-    <div class="hint">Resumo de pagamento do mês selecionado. Em breve: fechamento, recibos e relatórios.</div>`;
+  const cont=document.getElementById('financeiro-conteudo');
+  if(!db.meses.length){ cont.innerHTML='<div class="empty"><div class="big">💰</div>Nenhum mês.</div>'; return; }
+  const funcs=db.funcionarios;
+  const thFunc=funcs.map(f=>`<th>${esc(f.nome)}</th>`).join('');
+  const linhas=db.meses.map(m=>{
+    const cells=funcs.map(f=>{ const v=horasFuncMes(m,f.id)*(+f.valorHora||0); return `<td>${v?money(v):'<span style="color:var(--muted)">—</span>'}</td>`; }).join('');
+    return `<tr><td class="dia"><b>${esc(m.nome)}</b></td>${cells}<td class="tot">${money(totalPagarMes(m))}</td></tr>`;
+  }).join('');
+  const totFunc=funcs.map(f=>{ let v=0; db.meses.forEach(m=>v+=horasFuncMes(m,f.id)*(+f.valorHora||0)); return `<td>${money(v)}</td>`; }).join('');
+  let grand=0; db.meses.forEach(m=>grand+=totalPagarMes(m));
+  const cardsAno=funcs.map(f=>{ let h=0,v=0; db.meses.forEach(m=>{ const hh=horasFuncMes(m,f.id); h+=hh; v+=hh*(+f.valorHora||0); }); return `<div class="pay-card"><div class="nome"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><div class="linha"><span>Horas no ano</span><b style="color:var(--text)">${fmtHoras(h)}</b></div><div class="linha" style="margin-top:6px"><span>Total no ano</span><b class="total">${money(v)}</b></div></div>`; }).join('');
+  cont.innerHTML=`<div class="section-label">Valor a pagar — mês a mês</div>
+    <div class="tbl-wrap"><table class="planilha">
+      <thead><tr><th style="text-align:left">Mês</th>${thFunc}<th>Total do mês</th></tr></thead>
+      <tbody>${linhas}</tbody>
+      <tfoot><tr class="receber"><td style="text-align:left">Total do ano</td>${totFunc}<td>${money(grand)}</td></tr></tfoot>
+    </table></div>
+    <div class="hint">Calculado das horas lançadas (horas × valor/hora). Meses sem horas aparecem com "—".</div>
+    <div class="section-label" style="margin-top:22px">Acumulado do ano por funcionário</div>
+    <div class="pay-grid">${cardsAno}</div>`;
 }
 
 /* ---------- Funções (papéis da equipe) ---------- */
