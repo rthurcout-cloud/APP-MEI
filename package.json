@@ -1,0 +1,9 @@
+{
+  "name": "banco-horas-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Banco de Horas PIBN — registro de horas por funcionário/evento e cálculo de pagamento, com dados compartilhados via Vercel KV.",
+  "engines": {
+    "node": "20.x"
+  }
+}
