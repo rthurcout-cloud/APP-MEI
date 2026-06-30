@@ -3,45 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Banco de Horas PIBN</title>
+<title>PIBN — Escala e Horas</title>
 <meta name="theme-color" content="#0f1115">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Banco de Horas">
+<meta name="apple-mobile-web-app-title" content="PIBN Escala">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root {
-    --bg:#0f1115; --surface:#1a1d24; --surface-2:#232733; --border:#2e3340;
-    --text:#e6e8ec; --muted:#9aa0ac; --accent:#6c8cff; --accent-soft:#2a3354;
-    --green:#3ecf8e; --green-soft:#16331f; --amber:#f5b942; --amber-soft:#3a2e10;
+    --bg:#0b1020; --surface:#161b2e; --surface-2:#1e2740; --border:#2a3450;
+    --text:#e6e8ec; --muted:#93a0bd; --accent:#4f7cff; --accent-soft:#23315e;
+    --green:#3ecf8e; --green-soft:#143226; --amber:#f5b942; --amber-soft:#3a2e10;
     --red:#ff6b6b; --red-soft:#3a1717; --radius:12px;
   }
   * { box-sizing:border-box; }
-  body {
-    margin:0; font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
-    background:linear-gradient(160deg,#0a1330 0%,#140a38 55%,#1e0f42 100%);
-    background-attachment:fixed; min-height:100vh; color:var(--text); font-size:15px; line-height:1.5;
-  }
-  body::after { content:""; position:fixed; inset:0; background:radial-gradient(ellipse at 50% 22%, transparent 52%, rgba(0,0,0,0.4) 100%); z-index:0; pointer-events:none; }
-  main { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:24px; }
-  header {
-    background:rgba(18,21,30,0.72); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-    border-bottom:1px solid var(--border); padding:16px 24px; padding-top:max(16px,env(safe-area-inset-top));
-    display:flex; align-items:center; gap:12px; flex-wrap:wrap; position:sticky; top:0; z-index:10;
-  }
-  header h1 { font-size:18px; margin:0; display:flex; align-items:center; gap:8px; cursor:pointer; }
+  body { margin:0; font-family:-apple-system,"Segoe UI",Roboto,sans-serif; background:linear-gradient(160deg,#0a1330 0%,#0c1228 55%,#160e34 100%); background-attachment:fixed; color:var(--text); font-size:15px; line-height:1.5; min-height:100vh; }
+  a { color:inherit; text-decoration:none; }
+  .app { display:flex; min-height:100vh; }
+  /* Sidebar */
+  .sidebar { width:252px; flex-shrink:0; background:rgba(13,17,30,0.92); backdrop-filter:blur(10px); border-right:1px solid var(--border); display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto; z-index:60; }
+  .brand { display:flex; align-items:center; gap:10px; padding:20px 18px 14px; font-weight:700; font-size:15px; line-height:1.2; }
+  .brand .logo { font-size:26px; }
+  .nav-section { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.6px; padding:16px 20px 4px; }
+  .nav-item { display:flex; align-items:center; gap:12px; padding:10px 14px; color:var(--muted); cursor:pointer; border-radius:10px; margin:2px 10px; font-size:14px; }
+  .nav-item .ic { width:20px; text-align:center; }
+  .nav-item:hover { background:var(--surface-2); color:var(--text); }
+  .nav-item.active { background:var(--accent); color:#fff; font-weight:600; }
+  .nav-item .soon { margin-left:auto; font-size:10px; background:var(--amber-soft); color:var(--amber); padding:2px 6px; border-radius:10px; }
+  .user { margin-top:auto; padding:14px 16px; border-top:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  .user .av { width:36px; height:36px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+  .user .nome { font-size:14px; font-weight:600; } .user .cargo { font-size:12px; color:var(--muted); }
+  /* Conteúdo */
+  .content { flex:1; min-width:0; display:flex; flex-direction:column; }
+  .topbar-mobile { display:none; align-items:center; gap:12px; padding:12px 16px; padding-top:max(12px,env(safe-area-inset-top)); border-bottom:1px solid var(--border); background:rgba(13,17,30,0.9); position:sticky; top:0; z-index:40; }
+  .hamb { background:var(--surface-2); border:1px solid var(--border); color:var(--text); width:40px; height:40px; border-radius:10px; font-size:18px; cursor:pointer; }
+  .page-wrap { padding:24px; max-width:1180px; width:100%; margin:0 auto; }
+  .page-head { display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:22px; }
+  .page-head h1 { font-size:24px; margin:0 0 2px; }
+  .page-head .sub { color:var(--muted); font-size:14px; }
+  .date-pill { margin-left:auto; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:9px 14px; font-size:13px; color:var(--muted); display:flex; align-items:center; gap:8px; }
   .sync { font-size:12px; color:var(--muted); padding:4px 10px; border:1px solid var(--border); border-radius:20px; white-space:nowrap; }
-  .tabs { display:flex; gap:4px; margin-left:auto; flex-wrap:wrap; }
-  .tab { padding:8px 14px; border-radius:8px; cursor:pointer; color:var(--muted); border:1px solid transparent; background:none; font-size:14px; }
-  .tab:hover { background:var(--surface-2); color:var(--text); }
-  .tab.active { background:var(--accent-soft); color:#fff; border-color:var(--accent); }
-  /* Menu inicial — vertical */
-  .home-menu { display:flex; flex-direction:column; gap:14px; max-width:520px; margin:6vh auto 0; }
-  .home-btn { display:flex; flex-direction:row; align-items:center; gap:18px; padding:24px 26px; background:var(--surface); border:1px solid var(--border); border-radius:16px; color:var(--text); cursor:pointer; font-size:18px; font-weight:600; text-align:left; transition:transform .12s,border-color .12s,background .12s; }
-  .home-btn:hover { border-color:var(--accent); transform:translateY(-2px); background:var(--surface-2); }
-  .home-btn .ico { font-size:34px; line-height:1; flex-shrink:0; }
-  .home-btn .sub { display:block; font-size:13px; font-weight:400; color:var(--muted); margin-top:2px; }
+  /* Dashboard */
+  .dash-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .dash-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; align-items:center; gap:14px; }
+  .dash-card .ico { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+  .dash-card .big { font-size:26px; font-weight:700; line-height:1; }
+  .dash-card .lbl { color:var(--text); font-size:14px; font-weight:600; margin-top:4px; }
+  .dash-card .sub2 { color:var(--muted); font-size:12px; }
+  .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; }
+  .panel h3 { margin:0 0 14px; font-size:16px; display:flex; align-items:center; justify-content:space-between; }
+  .panel h3 .tag { font-size:12px; color:var(--accent); background:var(--accent-soft); padding:3px 10px; border-radius:20px; }
+  .ev-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--border); }
+  .ev-row:first-child { border-top:none; }
+  .mini-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .mini { background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:14px; }
+  .mini .n { font-size:20px; font-weight:700; } .mini .l { color:var(--muted); font-size:12px; }
+  @media (max-width:760px){ .dash-cards{ grid-template-columns:repeat(2,1fr); } .dash-grid{ grid-template-columns:1fr; } .mini-stats{ grid-template-columns:1fr; } }
+  /* Componentes gerais */
   .toolbar { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
   input,select,textarea { background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:8px; font-size:16px; font-family:inherit; }
   input:focus,select:focus,textarea:focus { outline:none; border-color:var(--accent); }
@@ -50,29 +70,18 @@
   .btn.secondary { background:var(--surface-2); border:1px solid var(--border); color:var(--text); font-weight:500; }
   .btn.danger { background:var(--red-soft); color:var(--red); border:1px solid var(--red); }
   .btn.small { padding:5px 10px; font-size:13px; }
-  .stats { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
-  .stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 18px; flex:1; min-width:150px; }
-  .stat .num { font-size:24px; font-weight:700; }
-  .stat .lbl { color:var(--muted); font-size:13px; }
-  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:12px; border-left:4px solid var(--accent); }
-  .card-head { display:flex; align-items:flex-start; gap:12px; }
-  .card-head .title { font-size:16px; font-weight:600; }
-  .card-head .when { color:var(--muted); font-size:13px; margin-top:2px; }
-  .card-actions { margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
-  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
-  .chip { background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:3px 10px; font-size:12px; display:inline-flex; align-items:center; gap:6px; }
-  .chip.zero { opacity:.45; }
-  .chip .dot { width:8px; height:8px; border-radius:50%; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; margin-bottom:12px; }
   .badge { padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; display:inline-block; background:var(--accent-soft); color:#cdd7ff; }
+  .badge.green { background:var(--green-soft); color:var(--green); } .badge.amber { background:var(--amber-soft); color:var(--amber); }
   .section-label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin:12px 0 8px; }
-  .empty { text-align:center; color:var(--muted); padding:60px 20px; }
+  .empty { text-align:center; color:var(--muted); padding:50px 20px; }
   .empty .big { font-size:42px; margin-bottom:8px; }
+  .avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:13px; flex-shrink:0; }
   .pay-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
   .pay-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
   .pay-card .nome { font-weight:600; font-size:16px; display:flex; align-items:center; gap:8px; }
   .pay-card .linha { display:flex; justify-content:space-between; font-size:14px; margin-top:8px; color:var(--muted); }
-  .pay-card .total { font-size:22px; font-weight:700; color:var(--green); margin-top:10px; }
-  .avatar { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:14px; flex-shrink:0; }
+  .pay-card .total { font-size:22px; font-weight:700; color:var(--green); }
   /* Calendário */
   .cal-head, .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
   .cal-head div { text-align:center; color:var(--muted); font-size:12px; padding:4px 0; }
@@ -80,84 +89,101 @@
   .cal-cell.vazio { background:none; border:none; cursor:default; }
   .cal-cell.on { background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700; }
   .cal-cell:not(.vazio):active { transform:scale(.93); }
-  /* Planilha de horários */
+  /* Planilha */
   .tbl-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); -webkit-overflow-scrolling:touch; }
   table.planilha { border-collapse:collapse; width:100%; min-width:560px; font-size:13px; }
   table.planilha th, table.planilha td { padding:8px 10px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
   table.planilha thead th { background:var(--surface-2); color:var(--muted); font-weight:600; position:sticky; top:0; }
-  table.planilha td.dia { text-align:left; cursor:pointer; }
-  table.planilha td.dia small { color:var(--muted); }
+  table.planilha td.dia { text-align:left; cursor:pointer; } table.planilha td.dia small { color:var(--muted); }
   table.planilha td.ev { text-align:left; cursor:pointer; max-width:150px; overflow:hidden; text-overflow:ellipsis; }
   table.planilha input.h { width:60px; padding:5px 6px; text-align:center; font-size:14px; }
   table.planilha td.tot { font-weight:700; color:var(--accent); }
   table.planilha tfoot td { background:var(--surface-2); font-weight:700; border-top:2px solid var(--accent); border-bottom:none; }
   table.planilha tfoot tr.receber td { color:var(--green); }
   /* Modal */
-  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:flex-start; justify-content:center; z-index:50; overflow-y:auto; padding:40px 16px; }
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:flex-start; justify-content:center; z-index:80; overflow-y:auto; padding:40px 16px; }
   .overlay.open { display:flex; }
   .modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; width:100%; max-width:620px; padding:24px; }
   .modal h2 { margin:0 0 18px; font-size:18px; }
-  .field { margin-bottom:14px; }
-  .field label { display:block; font-size:13px; color:var(--muted); margin-bottom:5px; }
+  .field { margin-bottom:14px; } .field label { display:block; font-size:13px; color:var(--muted); margin-bottom:5px; }
   .field input, .field select, .field textarea { width:100%; }
-  .row { display:flex; gap:12px; }
-  .row .field { flex:1; }
+  .row { display:flex; gap:12px; } .row .field { flex:1; }
   .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
   .func-row { display:grid; grid-template-columns:1fr 90px 90px 90px; gap:8px; align-items:center; padding:8px 0; border-top:1px solid var(--border); }
   .func-row .fn { display:flex; align-items:center; gap:8px; font-size:14px; }
-  .func-row input { width:100%; padding:7px 8px; text-align:center; }
-  .func-row .cab { color:var(--muted); font-size:12px; text-align:center; }
+  .func-row input { width:100%; padding:7px 8px; text-align:center; } .func-row .cab { color:var(--muted); font-size:12px; text-align:center; }
   .hint { color:var(--muted); font-size:12px; margin-top:4px; }
-  @media (max-width:560px){
-    .func-row { grid-template-columns:1fr 1fr 1fr; grid-template-areas:"nome nome nome" "e s h"; gap:6px; }
-    .func-row .fn { grid-area:nome; }
+  .backdrop { display:none; }
+  @media (max-width:560px){ .func-row { grid-template-columns:1fr 1fr 1fr; grid-template-areas:"nome nome nome" "e s h"; gap:6px; } .func-row .fn { grid-area:nome; } }
+  @media (max-width:900px){
+    .sidebar { position:fixed; left:0; top:0; bottom:0; transform:translateX(-100%); transition:transform .2s ease; }
+    .sidebar.open { transform:none; }
+    .topbar-mobile { display:flex; }
+    .backdrop.show { display:block; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:55; }
+    .page-wrap { padding:16px; }
+    .date-pill { margin-left:0; }
   }
 </style>
 </head>
 <body>
-<header>
-  <h1 onclick="navegar('home')" title="Voltar ao início">⏱️ Banco de Horas PIBN</h1>
-  <span id="sync" class="sync">conectando…</span>
-  <div class="tabs">
-    <button class="tab" data-view="registro">⏱️ Horários</button>
-    <button class="tab" data-view="agenda">📅 Agenda</button>
-    <button class="tab" data-view="funcionarios">👥 Funcionários</button>
-  </div>
-</header>
+<div class="app">
+  <div class="backdrop" id="backdrop" onclick="fecharMenu()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="logo">🏛️</span><span>Primeira Igreja<br>Batista de Niterói</span></div>
+    <div class="nav-section">Geral</div>
+    <div class="nav-item" data-view="dashboard"><span class="ic">🏠</span>Dashboard</div>
+    <div class="nav-item" data-view="agenda"><span class="ic">🗓️</span>Agenda / Escala</div>
+    <div class="nav-item" data-view="funcionarios"><span class="ic">👥</span>Funcionários</div>
+    <div class="nav-item" data-view="ponto"><span class="ic">🕐</span>Ponto<span class="soon">em breve</span></div>
+    <div class="nav-item" data-view="confirmacoes"><span class="ic">✅</span>Confirmações<span class="soon">em breve</span></div>
+    <div class="nav-section">Financeiro</div>
+    <div class="nav-item" data-view="banco"><span class="ic">📊</span>Banco de Horas</div>
+    <div class="nav-item" data-view="financeiro"><span class="ic">💰</span>Financeiro</div>
+    <div class="nav-item" data-view="relatorios"><span class="ic">📄</span>Relatórios<span class="soon">em breve</span></div>
+    <div class="nav-section">Configurações</div>
+    <div class="nav-item" data-view="funcoes"><span class="ic">🏷️</span>Funções<span class="soon">em breve</span></div>
+    <div class="nav-item" data-view="config"><span class="ic">⚙️</span>Configurações<span class="soon">em breve</span></div>
+    <div class="user"><div class="av">AD</div><div><div class="nome">Administrador</div><div class="cargo">PIBN</div></div></div>
+  </aside>
 
-<main>
-  <!-- INÍCIO (menu vertical) -->
-  <div id="view-home">
-    <div class="home-menu">
-      <button class="home-btn" onclick="navegar('registro')"><span class="ico">⏱️</span><span>Preencher horários<span class="sub">Lançar as horas trabalhadas</span></span></button>
-      <button class="home-btn" onclick="navegar('agenda')"><span class="ico">📅</span><span>Agenda<span class="sub">Marcar os dias que cada um pode trabalhar</span></span></button>
-      <button class="home-btn" onclick="navegar('funcionarios')"><span class="ico">👥</span><span>Dados dos funcionários<span class="sub">Cadastro, valor/hora e pagamento</span></span></button>
+  <div class="content">
+    <div class="topbar-mobile">
+      <button class="hamb" onclick="abrirMenu()">☰</button>
+      <b>PIBN — Escala e Horas</b>
+      <span id="syncM" class="sync" style="margin-left:auto">…</span>
+    </div>
+    <div class="page-wrap">
+      <div class="page-head">
+        <div>
+          <h1 id="pageTitulo">Dashboard</h1>
+          <div class="sub" id="pageSub">Aqui está o resumo de hoje e da equipe.</div>
+        </div>
+        <div class="date-pill">📅 <span id="dataHoje"></span></div>
+        <span id="sync" class="sync">conectando…</span>
+      </div>
+
+      <section id="page-dashboard" class="page"></section>
+      <section id="page-agenda" class="page" style="display:none"><div id="agenda-conteudo"></div></section>
+      <section id="page-funcionarios" class="page" style="display:none">
+        <div class="toolbar"><button class="btn" onclick="openFunc()">+ Novo funcionário</button><select id="mesFunc" onchange="setMes(this.value)"></select></div>
+        <div id="lista-funcionarios"></div>
+      </section>
+      <section id="page-banco" class="page" style="display:none">
+        <div class="toolbar"><select id="mesBanco" onchange="setMes(this.value)"></select><button class="btn" onclick="openDia()">+ Novo dia</button></div>
+        <div id="planilha-conteudo"></div>
+      </section>
+      <section id="page-financeiro" class="page" style="display:none">
+        <div class="toolbar"><select id="mesFin" onchange="setMes(this.value)"></select></div>
+        <div id="financeiro-conteudo"></div>
+      </section>
+      <section id="page-ponto" class="page" style="display:none"></section>
+      <section id="page-confirmacoes" class="page" style="display:none"></section>
+      <section id="page-relatorios" class="page" style="display:none"></section>
+      <section id="page-funcoes" class="page" style="display:none"></section>
+      <section id="page-config" class="page" style="display:none"></section>
     </div>
   </div>
-
-  <!-- PREENCHER HORÁRIOS -->
-  <div id="view-registro" style="display:none">
-    <div class="toolbar">
-      <select id="mesRegistro" onchange="setMes(this.value)"></select>
-      <button class="btn" onclick="openDia()">+ Novo dia</button>
-    </div>
-    <div id="planilha-conteudo"></div>
-  </div>
-
-  <!-- AGENDA / DISPONIBILIDADE -->
-  <div id="view-agenda" style="display:none">
-    <div id="agenda-conteudo"></div>
-  </div>
-
-  <!-- FUNCIONÁRIOS -->
-  <div id="view-funcionarios" style="display:none">
-    <div class="toolbar">
-      <button class="btn" onclick="openFunc()">+ Novo funcionário</button>
-      <select id="mesFunc" onchange="setMes(this.value)"></select>
-    </div>
-    <div id="lista-funcionarios"></div>
-  </div>
-</main>
+</div>
 
 <!-- MODAL DIA -->
 <div class="overlay" id="overlayDia">
@@ -181,7 +207,6 @@
     </div>
   </div>
 </div>
-
 <!-- MODAL FUNCIONÁRIO -->
 <div class="overlay" id="overlayFunc">
   <div class="modal" style="max-width:440px">
@@ -199,55 +224,33 @@
 
 <script>
 let db = { funcionarios: [], meses: [], disponibilidade: {} };
-let mesAtualId = null;
-let dispFuncId = null;
+let mesAtualId = null, dispFuncId = null;
 let accessCode = localStorage.getItem('bh-code') || '';
 
 /* ---------- Sincronização ---------- */
 function authHeaders(extra){ return Object.assign({ 'x-access-code': accessCode }, extra||{}); }
-function normalize(d){ return {
-  funcionarios: Array.isArray(d&&d.funcionarios)?d.funcionarios:[],
-  meses: Array.isArray(d&&d.meses)?d.meses:[],
-  disponibilidade: (d&&typeof d.disponibilidade==='object'&&d.disponibilidade)?d.disponibilidade:{}
-}; }
+function normalize(d){ return { funcionarios:Array.isArray(d&&d.funcionarios)?d.funcionarios:[], meses:Array.isArray(d&&d.meses)?d.meses:[], disponibilidade:(d&&typeof d.disponibilidade==='object'&&d.disponibilidade)?d.disponibilidade:{} }; }
 function setSync(state){
-  const el=document.getElementById('sync');
   const map={ ok:['✓ Sincronizado','var(--green)'], salvando:['Salvando…','var(--amber)'], erro:['Erro ao salvar','var(--red)'], off:['Sem conexão','var(--muted)'], bloqueado:['Código necessário','var(--red)'], conectando:['Conectando…','var(--muted)'] };
-  const [txt,cor]=map[state]||map.conectando; el.textContent=txt; el.style.color=cor; el.style.borderColor=cor;
+  const [txt,cor]=map[state]||map.conectando;
+  ['sync','syncM'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.textContent=txt; el.style.color=cor; el.style.borderColor=cor; } });
 }
 function pedirCodigo(msg){ const c=window.prompt(msg||'Digite o código de acesso:'); if(c===null) return false; accessCode=c.trim(); localStorage.setItem('bh-code',accessCode); return true; }
 async function carregarDoServidor(){
   setSync('conectando');
   while(true){
-    let r;
-    try { r=await fetch('/api/data',{headers:authHeaders()}); } catch(e){ setSync('off'); return false; }
+    let r; try { r=await fetch('/api/data',{headers:authHeaders()}); } catch(e){ setSync('off'); return false; }
     if(r.status===401){ if(!pedirCodigo('Código incorreto ou necessário. Digite o código de acesso:')){ setSync('bloqueado'); return false; } continue; }
     if(!r.ok){ setSync('erro'); return false; }
     db=normalize(await r.json());
-    if(!db.funcionarios.length && !db.meses.length){
-      try { const seed=await (await fetch('dados-iniciais.json')).json(); db=normalize(seed); await pushAgora(); } catch(e){}
-    }
+    if(!db.funcionarios.length && !db.meses.length){ try { const seed=await (await fetch('dados-iniciais.json')).json(); db=normalize(seed); await pushAgora(); } catch(e){} }
     setSync('ok'); return true;
   }
 }
 let pushTimer=null, enviando=false, pendente=false;
 function save(){ pendente=true; setSync('salvando'); clearTimeout(pushTimer); pushTimer=setTimeout(pushAgora,600); }
-async function pushAgora(){
-  if(enviando) return; enviando=true; pendente=false;
-  try { const r=await fetch('/api/data',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(db)}); setSync(r.ok?'ok':'erro'); }
-  catch(e){ setSync('off'); }
-  enviando=false; if(pendente) pushAgora();
-}
-async function sincronizarBaixar(){
-  if(document.querySelector('.overlay.open')) return;
-  if(enviando||pendente) return;
-  let r; try { r=await fetch('/api/data',{headers:authHeaders()}); } catch(e){ setSync('off'); return; }
-  if(!r.ok) return;
-  const novo=normalize(await r.json());
-  if(JSON.stringify(novo)!==JSON.stringify(db)){ db=novo; if(!mesById(mesAtualId)) mesAtualId=db.meses[0]?db.meses[0].id:null; renderTudo(); }
-  setSync('ok');
-}
-function renderTudo(){ popularSelectsMes(); renderRegistro(); renderAgenda(); renderFuncionarios(); }
+async function pushAgora(){ if(enviando) return; enviando=true; pendente=false; try { const r=await fetch('/api/data',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(db)}); setSync(r.ok?'ok':'erro'); } catch(e){ setSync('off'); } enviando=false; if(pendente) pushAgora(); }
+async function sincronizarBaixar(){ if(document.querySelector('.overlay.open')) return; if(enviando||pendente) return; let r; try { r=await fetch('/api/data',{headers:authHeaders()}); } catch(e){ setSync('off'); return; } if(!r.ok) return; const novo=normalize(await r.json()); if(JSON.stringify(novo)!==JSON.stringify(db)){ db=novo; if(!mesById(mesAtualId)) mesAtualId=db.meses[0]?db.meses[0].id:null; renderAtual(); } setSync('ok'); }
 function uid(p){ return (p||'id')+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36); }
 
 /* ---------- Helpers ---------- */
@@ -261,69 +264,126 @@ function money(v){ return (+v||0).toLocaleString('pt-BR',{style:'currency',curre
 function fmtData(iso){ if(!iso) return 'Sem data'; const [y,m,d]=iso.split('-'); const dias=['dom','seg','ter','qua','qui','sex','sáb']; const dt=new Date(iso+'T00:00:00'); return `${dias[dt.getDay()]} ${d}/${m}/${y}`; }
 function diaSemanaPT(iso){ if(!iso) return '—'; const dias=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado']; const dt=new Date(iso+'T00:00:00'); return dias[dt.getDay()]; }
 function iniciais(n){ const p=(n||'').trim().split(/\s+/); return ((p[0]||'?')[0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase(); }
-function corFunc(id){ const cores={nathan:'#6c8cff',maycon:'#3ecf8e',daniel:'#f5b942',arthur:'#c084fc'}; if(cores[id]) return cores[id]; let h=0; for(const c of (id||'')) h=(h*31+c.charCodeAt(0))%360; return `hsl(${h},55%,55%)`; }
+function corFunc(id){ const cores={nathan:'#4f7cff',maycon:'#3ecf8e',daniel:'#f5b942',arthur:'#c084fc'}; if(cores[id]) return cores[id]; let h=0; for(const c of (id||'')) h=(h*31+c.charCodeAt(0))%360; return `hsl(${h},55%,55%)`; }
 function regDe(d,fid){ return (d.reg&&d.reg[fid])||{entrada:'',saida:'',horas:0}; }
 function horasFuncMes(mes,fid){ return (mes.dias||[]).reduce((s,d)=>s+(+regDe(d,fid).horas||0),0); }
 function horasDia(d){ return db.funcionarios.reduce((s,f)=>s+(+regDe(d,f.id).horas||0),0); }
 function totalPagarMes(mes){ return db.funcionarios.reduce((s,f)=>s+horasFuncMes(mes,f.id)*(+f.valorHora||0),0); }
+function hojeISO(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function dataExtenso(){ const d=new Date(); const dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']; const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']; return `${dias[d.getDay()]}, ${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`; }
+const MESES_PT={janeiro:1,fevereiro:2,'março':3,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+function mesAnoDe(mes){ if(mes.dias&&mes.dias[0]&&mes.dias[0].data){ const p=mes.dias[0].data.split('-'); return {ano:+p[0],mes:+p[1]}; } const t=(mes.nome||'').toLowerCase().split(/\s+/); return {ano:+(t[1]||2026), mes:(MESES_PT[t[0]]||1)}; }
+function todosDias(){ const out=[]; db.meses.forEach(m=>(m.dias||[]).forEach(d=>out.push({mes:m,dia:d}))); return out; }
 
 /* ---------- Navegação ---------- */
+const PAGES=['dashboard','agenda','funcionarios','ponto','confirmacoes','banco','financeiro','relatorios','funcoes','config'];
+const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Dias que cada funcionário pode trabalhar.'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Funções da equipe (Som, Transmissão...).'], config:['Configurações','Ajustes do sistema.'] };
+let viewAtual='dashboard';
 function navegar(v){
-  ['home','registro','agenda','funcionarios'].forEach(n=>{ const el=document.getElementById('view-'+n); if(el) el.style.display=(n===v)?'':'none'; });
-  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
-  if(v==='registro') renderRegistro();
-  if(v==='agenda') renderAgenda();
-  if(v==='funcionarios') renderFuncionarios();
+  viewAtual=v;
+  PAGES.forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display=(p===v)?'':'none'; });
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
+  document.getElementById('pageTitulo').textContent=TITULOS[v][0];
+  document.getElementById('pageSub').textContent=TITULOS[v][1];
+  renderAtual();
+  fecharMenu();
   window.scrollTo(0,0);
 }
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>navegar(t.dataset.view));
+function renderAtual(){
+  popularSelectsMes();
+  if(viewAtual==='dashboard') renderDashboard();
+  else if(viewAtual==='agenda') renderAgenda();
+  else if(viewAtual==='funcionarios') renderFuncionarios();
+  else if(viewAtual==='banco') renderRegistro();
+  else if(viewAtual==='financeiro') renderFinanceiro();
+  else renderEmConstrucao(viewAtual);
+}
+document.querySelectorAll('.nav-item').forEach(t=>t.onclick=()=>navegar(t.dataset.view));
+function abrirMenu(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('backdrop').classList.add('show'); }
+function fecharMenu(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('backdrop').classList.remove('show'); }
 function popularSelectsMes(){
   if(!mesById(mesAtualId)) mesAtualId = db.meses.length? db.meses[0].id : null;
   const opts = db.meses.map(m=>`<option value="${m.id}" ${m.id===mesAtualId?'selected':''}>${esc(m.nome)}</option>`).join('');
-  ['mesRegistro','mesFunc'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
+  ['mesFunc','mesBanco','mesFin'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
 }
-function setMes(id){ mesAtualId=id; popularSelectsMes(); renderRegistro(); renderFuncionarios(); renderAgenda(); }
+function setMes(id){ mesAtualId=id; popularSelectsMes(); renderAtual(); }
 
-/* ---------- Preencher horários (planilha) ---------- */
-function renderRegistro(){
-  const cont=document.getElementById('planilha-conteudo');
+/* ---------- Dashboard ---------- */
+function renderDashboard(){
+  const cont=document.getElementById('page-dashboard');
+  const hoje=hojeISO();
+  const eventosHoje=todosDias().filter(x=>x.dia.data===hoje);
   const mes=mesById(mesAtualId);
+  const totHorasMes=mes? db.funcionarios.reduce((s,f)=>s+horasFuncMes(mes,f.id),0):0;
+  const valorMes=mes? totalPagarMes(mes):0;
+  const proximos=todosDias().filter(x=>(x.dia.data||'')>=hoje).sort((a,b)=>(a.dia.data||'').localeCompare(b.dia.data||'')).slice(0,5);
+  const cards=`
+    <div class="dash-cards">
+      <div class="dash-card"><div class="ico" style="background:var(--accent-soft)">📅</div><div><div class="big">${eventosHoje.length}</div><div class="lbl">Eventos hoje</div><div class="sub2">${esc(diaSemanaPT(hoje))}</div></div></div>
+      <div class="dash-card"><div class="ico" style="background:var(--green-soft)">👥</div><div><div class="big">${db.funcionarios.length}</div><div class="lbl">Funcionários</div><div class="sub2">Equipe ativa</div></div></div>
+      <div class="dash-card"><div class="ico" style="background:var(--amber-soft)">⏱️</div><div><div class="big">${fmtHoras(totHorasMes)}</div><div class="lbl">Horas no mês</div><div class="sub2">${esc(mes?mes.nome:'—')}</div></div></div>
+      <div class="dash-card"><div class="ico" style="background:#1c3a2b">💰</div><div><div class="big" style="font-size:20px;color:var(--green)">${money(valorMes)}</div><div class="lbl">A pagar</div><div class="sub2">${esc(mes?mes.nome:'—')}</div></div></div>
+    </div>`;
+  const agendaHoje = eventosHoje.length
+    ? eventosHoje.map(x=>{
+        const pessoas=db.funcionarios.filter(f=>(+regDe(x.dia,f.id).horas||0)>0);
+        const chips=pessoas.length? pessoas.map(f=>`<span class="badge" style="background:${corFunc(f.id)}22;color:${corFunc(f.id)}">${esc(f.nome)}</span>`).join(' ') : '<span class="sub2" style="color:var(--muted)">sem horas lançadas</span>';
+        return `<div class="ev-row"><div style="flex:1"><b>${esc(x.dia.evento)||'Evento'}</b><div class="sub2" style="color:var(--muted)">${fmtData(x.dia.data)}</div></div><div>${chips}</div></div>`;
+      }).join('')
+    : '<div class="empty" style="padding:30px"><div class="big">🗓️</div>Nenhum evento hoje.</div>';
+  const prox = proximos.length
+    ? proximos.map(x=>{ const n=db.funcionarios.filter(f=>(+regDe(x.dia,f.id).horas||0)>0).length; const [y,mm,dd]=(x.dia.data||'--').split('-'); return `<div class="ev-row"><div style="text-align:center;min-width:42px"><div style="font-size:18px;font-weight:700">${dd||'?'}</div><div class="sub2" style="color:var(--muted)">${esc((x.mes.nome||'').slice(0,3))}</div></div><div style="flex:1"><b>${esc(x.dia.evento)||'Evento'}</b><div class="sub2" style="color:var(--muted)">${esc(x.dia.diaSemana||diaSemanaPT(x.dia.data))}</div></div><span class="badge">${n} c/ horas</span></div>`; }).join('')
+    : '<div class="sub2" style="color:var(--muted)">Sem eventos futuros.</div>';
+  const miniFunc=db.funcionarios.map(f=>{ const h=mes?horasFuncMes(mes,f.id):0; return `<div class="mini"><div class="n" style="font-size:16px">${esc(f.nome)}</div><div class="l">${fmtHoras(h)} · ${money(h*(+f.valorHora||0))}</div></div>`; }).join('');
+  cont.innerHTML = cards + `
+    <div class="dash-grid">
+      <div class="panel"><h3>Agenda de Hoje <span class="tag">${esc(diaSemanaPT(hoje))}</span></h3>${agendaHoje}
+        <div style="margin-top:14px"><button class="btn secondary" style="width:100%" onclick="navegar('agenda')">Ver agenda / escala</button></div></div>
+      <div class="panel"><h3>Próximos Eventos</h3>${prox}</div>
+    </div>
+    <div class="dash-grid">
+      <div class="panel"><h3>Resumo do Mês <span class="tag">${esc(mes?mes.nome:'')}</span></h3>
+        <div class="mini-stats" style="margin-bottom:12px">
+          <div class="mini"><div class="n" style="color:var(--accent)">${fmtHoras(totHorasMes)}</div><div class="l">Total de horas</div></div>
+          <div class="mini"><div class="n">${db.funcionarios.length}</div><div class="l">Funcionários</div></div>
+          <div class="mini"><div class="n" style="color:var(--green)">${money(valorMes)}</div><div class="l">A pagar</div></div>
+        </div>
+        <div class="mini-stats">${miniFunc}</div>
+        <div style="margin-top:14px"><button class="btn secondary" style="width:100%" onclick="navegar('banco')">Ver banco de horas</button></div></div>
+      <div class="panel"><h3>Atalhos</h3>
+        <div class="ev-row" style="cursor:pointer" onclick="navegar('banco')"><span style="font-size:20px">📊</span><div style="flex:1"><b>Preencher horas</b><div class="sub2" style="color:var(--muted)">Lançar horas do mês</div></div>→</div>
+        <div class="ev-row" style="cursor:pointer" onclick="navegar('agenda')"><span style="font-size:20px">🗓️</span><div style="flex:1"><b>Marcar disponibilidade</b><div class="sub2" style="color:var(--muted)">Dias que cada um pode trabalhar</div></div>→</div>
+        <div class="ev-row" style="cursor:pointer" onclick="navegar('funcionarios')"><span style="font-size:20px">👥</span><div style="flex:1"><b>Funcionários</b><div class="sub2" style="color:var(--muted)">Cadastro e pagamento</div></div>→</div>
+      </div>
+    </div>`;
+}
+
+/* ---------- Banco de Horas (planilha) ---------- */
+function renderRegistro(){
+  const cont=document.getElementById('planilha-conteudo'); const mes=mesById(mesAtualId);
   if(!mes){ cont.innerHTML='<div class="empty"><div class="big">📅</div>Nenhum mês cadastrado.</div>'; return; }
-  const funcs=db.funcionarios;
-  const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  const funcs=db.funcionarios; const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const thFunc=funcs.map(f=>`<th>${esc(f.nome)}</th>`).join('');
   if(!dias.length){ cont.innerHTML='<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.<br>Clique em <b>+ Novo dia</b>.</div>'; return; }
   const linhas=dias.map(d=>{
     const cells=funcs.map(f=>{ const h=+regDe(d,f.id).horas||0; return `<td><input class="h" type="number" step="0.25" min="0" value="${h?Math.round(h*100)/100:''}" placeholder="0" onchange="setHora('${d.id}','${f.id}',this.value)"></td>`; }).join('');
     const p=(d.data||'--').split('-');
-    return `<tr>
-      <td class="dia" onclick="openDia('${d.id}')"><b>${p[2]||'?'}/${p[1]||'?'}</b> <small>${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</small></td>
-      <td class="ev" onclick="openDia('${d.id}')">${esc(d.evento)||'—'}</td>
-      ${cells}
-      <td class="tot" id="tot-${d.id}">${fmtHoras(horasDia(d))}</td>
-    </tr>`;
+    return `<tr><td class="dia" onclick="openDia('${d.id}')"><b>${p[2]||'?'}/${p[1]||'?'}</b> <small>${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</small></td><td class="ev" onclick="openDia('${d.id}')">${esc(d.evento)||'—'}</td>${cells}<td class="tot" id="tot-${d.id}">${fmtHoras(horasDia(d))}</td></tr>`;
   }).join('');
   const totFunc=funcs.map(f=>`<td id="ft-${f.id}">${fmtHoras(horasFuncMes(mes,f.id))}</td>`).join('');
   const recFunc=funcs.map(f=>`<td id="fr-${f.id}">${money(horasFuncMes(mes,f.id)*(+f.valorHora||0))}</td>`).join('');
   const totMesHoras=funcs.reduce((s,f)=>s+horasFuncMes(mes,f.id),0);
-  cont.innerHTML=`
-    <div class="tbl-wrap"><table class="planilha">
-      <thead><tr><th style="text-align:left">Dia</th><th style="text-align:left">Evento</th>${thFunc}<th>Total</th></tr></thead>
-      <tbody>${linhas}</tbody>
-      <tfoot>
-        <tr><td colspan="2" style="text-align:left">Total de horas</td>${totFunc}<td class="tot" id="ftg">${fmtHoras(totMesHoras)}</td></tr>
-        <tr class="receber"><td colspan="2" style="text-align:left">Valor a receber</td>${recFunc}<td id="frg">${money(totalPagarMes(mes))}</td></tr>
-      </tfoot>
-    </table></div>
-    <div class="hint">Digite as horas direto na tabela. Toque na <b>data</b> ou no <b>evento</b> pra editar entrada/saída. Os totais e o valor a receber ficam no rodapé.</div>`;
+  cont.innerHTML=`<div class="tbl-wrap"><table class="planilha">
+    <thead><tr><th style="text-align:left">Dia</th><th style="text-align:left">Evento</th>${thFunc}<th>Total</th></tr></thead>
+    <tbody>${linhas}</tbody>
+    <tfoot><tr><td colspan="2" style="text-align:left">Total de horas</td>${totFunc}<td class="tot" id="ftg">${fmtHoras(totMesHoras)}</td></tr>
+    <tr class="receber"><td colspan="2" style="text-align:left">Valor a receber</td>${recFunc}<td id="frg">${money(totalPagarMes(mes))}</td></tr></tfoot>
+  </table></div><div class="hint">Digite as horas direto na tabela. Toque na <b>data</b> ou no <b>evento</b> pra editar entrada/saída.</div>`;
 }
 function setHora(diaId, fid, val){
-  const mes=mesById(mesAtualId); if(!mes) return;
-  const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
-  if(!d.reg) d.reg={};
-  if(!d.reg[fid]) d.reg[fid]={entrada:'',saida:'',horas:0};
-  d.reg[fid].horas=Math.round((parseFloat(val)||0)*10000)/10000;
-  save();
+  const mes=mesById(mesAtualId); if(!mes) return; const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
+  if(!d.reg) d.reg={}; if(!d.reg[fid]) d.reg[fid]={entrada:'',saida:'',horas:0};
+  d.reg[fid].horas=Math.round((parseFloat(val)||0)*10000)/10000; save();
   const t=document.getElementById('tot-'+diaId); if(t) t.textContent=fmtHoras(horasDia(d));
   db.funcionarios.forEach(f=>{ const ft=document.getElementById('ft-'+f.id); if(ft) ft.textContent=fmtHoras(horasFuncMes(mes,f.id)); const fr=document.getElementById('fr-'+f.id); if(fr) fr.textContent=money(horasFuncMes(mes,f.id)*(+f.valorHora||0)); });
   const g=document.getElementById('ftg'); if(g) g.textContent=fmtHoras(db.funcionarios.reduce((s,f)=>s+horasFuncMes(mes,f.id),0));
@@ -334,65 +394,35 @@ function setHora(diaId, fid, val){
 function buildDiaRows(reg){
   document.getElementById('diaFuncRows').innerHTML = db.funcionarios.map(f=>{
     const r=(reg&&reg[f.id])||{entrada:'',saida:'',horas:0};
-    return `<div class="func-row">
-      <div class="fn"><span class="avatar" style="width:26px;height:26px;font-size:12px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div>
-      <input type="time" id="ent-${f.id}" value="${esc(r.entrada||'')}" oninput="recalcHoras('${f.id}')">
-      <input type="time" id="sai-${f.id}" value="${esc(r.saida||'')}" oninput="recalcHoras('${f.id}')">
-      <input type="number" id="hor-${f.id}" step="0.01" min="0" value="${r.horas?(+r.horas):''}" placeholder="0">
-    </div>`;
+    return `<div class="func-row"><div class="fn"><span class="avatar" style="width:26px;height:26px;font-size:12px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" id="ent-${f.id}" value="${esc(r.entrada||'')}" oninput="recalcHoras('${f.id}')"><input type="time" id="sai-${f.id}" value="${esc(r.saida||'')}" oninput="recalcHoras('${f.id}')"><input type="number" id="hor-${f.id}" step="0.01" min="0" value="${r.horas?(+r.horas):''}" placeholder="0"></div>`;
   }).join('');
 }
-function recalcHoras(fid){
-  const e=document.getElementById('ent-'+fid).value, s=document.getElementById('sai-'+fid).value;
-  const h=horasEntre(e,s);
-  if(h!=null) document.getElementById('hor-'+fid).value = Math.round(h*100)/100;
-}
+function recalcHoras(fid){ const e=document.getElementById('ent-'+fid).value, s=document.getElementById('sai-'+fid).value; const h=horasEntre(e,s); if(h!=null) document.getElementById('hor-'+fid).value=Math.round(h*100)/100; }
 function openDia(id){
-  const mes=mesById(mesAtualId);
-  if(!mes){ alert('Cadastre/selecione um mês primeiro.'); return; }
-  let dia=null;
-  if(id) dia=(mes.dias||[]).find(x=>x.id===id);
-  document.getElementById('diaTitulo').textContent = dia?'Editar dia':'Novo dia';
-  document.getElementById('dId').value = dia?dia.id:'';
-  document.getElementById('dData').value = dia?dia.data:'';
-  document.getElementById('dDiaSemana').textContent = dia?(dia.diaSemana||diaSemanaPT(dia.data)):'—';
-  document.getElementById('dEvento').value = dia?(dia.evento||''):'';
-  document.getElementById('dObs').value = dia?(dia.obs||''):'';
+  const mes=mesById(mesAtualId); if(!mes){ alert('Selecione um mês primeiro.'); return; }
+  let dia=null; if(id) dia=(mes.dias||[]).find(x=>x.id===id);
+  document.getElementById('diaTitulo').textContent=dia?'Editar dia':'Novo dia';
+  document.getElementById('dId').value=dia?dia.id:''; document.getElementById('dData').value=dia?dia.data:'';
+  document.getElementById('dDiaSemana').textContent=dia?(dia.diaSemana||diaSemanaPT(dia.data)):'—';
+  document.getElementById('dEvento').value=dia?(dia.evento||''):''; document.getElementById('dObs').value=dia?(dia.obs||''):'';
   buildDiaRows(dia?dia.reg:null);
-  document.getElementById('btnExcluirDia').style.display = dia?'':'none';
+  document.getElementById('btnExcluirDia').style.display=dia?'':'none';
   document.getElementById('overlayDia').classList.add('open');
 }
 function closeDia(){ document.getElementById('overlayDia').classList.remove('open'); }
 document.getElementById('overlayDia').addEventListener('click',e=>{ if(e.target.id==='overlayDia') closeDia(); });
 function salvarDia(){
-  const mes=mesById(mesAtualId); if(!mes) return;
-  const data=document.getElementById('dData').value;
-  if(!data){ alert('Escolha a data.'); return; }
+  const mes=mesById(mesAtualId); if(!mes) return; const data=document.getElementById('dData').value; if(!data){ alert('Escolha a data.'); return; }
   const reg={};
-  db.funcionarios.forEach(f=>{
-    const entrada=document.getElementById('ent-'+f.id).value;
-    const saida=document.getElementById('sai-'+f.id).value;
-    let horas=parseFloat(document.getElementById('hor-'+f.id).value);
-    if(isNaN(horas)){ const h=horasEntre(entrada,saida); horas=h!=null?h:0; }
-    reg[f.id]={ entrada, saida, horas: Math.round(horas*10000)/10000 };
-  });
+  db.funcionarios.forEach(f=>{ const entrada=document.getElementById('ent-'+f.id).value; const saida=document.getElementById('sai-'+f.id).value; let horas=parseFloat(document.getElementById('hor-'+f.id).value); if(isNaN(horas)){ const h=horasEntre(entrada,saida); horas=h!=null?h:0; } reg[f.id]={entrada,saida,horas:Math.round(horas*10000)/10000}; });
   const obj={ data, diaSemana:diaSemanaPT(data), evento:document.getElementById('dEvento').value.trim(), obs:document.getElementById('dObs').value.trim(), reg };
-  const id=document.getElementById('dId').value;
-  if(!mes.dias) mes.dias=[];
-  if(id){ const d=mes.dias.find(x=>x.id===id); Object.assign(d,obj); }
-  else { obj.id=uid('d'); mes.dias.push(obj); }
-  save(); closeDia(); renderRegistro(); renderFuncionarios();
+  const id=document.getElementById('dId').value; if(!mes.dias) mes.dias=[];
+  if(id){ const d=mes.dias.find(x=>x.id===id); Object.assign(d,obj); } else { obj.id=uid('d'); mes.dias.push(obj); }
+  save(); closeDia(); renderAtual();
 }
-function excluirDia(){
-  const mes=mesById(mesAtualId); const id=document.getElementById('dId').value;
-  if(!confirm('Excluir este dia?')) return;
-  mes.dias=(mes.dias||[]).filter(x=>x.id!==id);
-  save(); closeDia(); renderRegistro(); renderFuncionarios();
-}
+function excluirDia(){ const mes=mesById(mesAtualId); const id=document.getElementById('dId').value; if(!confirm('Excluir este dia?')) return; mes.dias=(mes.dias||[]).filter(x=>x.id!==id); save(); closeDia(); renderAtual(); }
 
 /* ---------- Agenda / Disponibilidade ---------- */
-const MESES_PT={janeiro:1,fevereiro:2,'março':3,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
-function mesAnoDe(mes){ if(mes.dias&&mes.dias[0]&&mes.dias[0].data){ const p=mes.dias[0].data.split('-'); return {ano:+p[0],mes:+p[1]}; } const t=(mes.nome||'').toLowerCase().split(/\s+/); return {ano:+(t[1]||2026), mes:(MESES_PT[t[0]]||1)}; }
 function dispDe(fid){ if(!db.disponibilidade[fid]) db.disponibilidade[fid]={}; return db.disponibilidade[fid]; }
 function disponivel(fid,iso){ return !!(db.disponibilidade[fid]&&db.disponibilidade[fid][iso]); }
 function toggleDisp(fid,iso){ const m=dispDe(fid); if(m[iso]) delete m[iso]; else m[iso]=true; save(); renderAgenda(); }
@@ -405,80 +435,62 @@ function renderAgenda(){
   const mes=mesById(mesAtualId); const f=funcById(dispFuncId);
   const funcOpts=db.funcionarios.map(x=>`<option value="${x.id}" ${x.id===dispFuncId?'selected':''}>${esc(x.nome)}</option>`).join('');
   const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
-  const {ano,mes:mm}=mesAnoDe(mes);
-  const offset=new Date(ano,mm-1,1).getDay();
-  const nd=new Date(ano,mm,0).getDate();
-  let cells=''; for(let i=0;i<offset;i++) cells+='<div class="cal-cell vazio"></div>';
-  let qtd=0;
+  const {ano,mes:mm}=mesAnoDe(mes); const offset=new Date(ano,mm-1,1).getDay(); const nd=new Date(ano,mm,0).getDate();
+  let cells=''; for(let i=0;i<offset;i++) cells+='<div class="cal-cell vazio"></div>'; let qtd=0;
   for(let d=1;d<=nd;d++){ const iso=`${ano}-${String(mm).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const on=disponivel(dispFuncId,iso); if(on) qtd++; cells+=`<div class="cal-cell ${on?'on':''}" onclick="toggleDisp('${dispFuncId}','${iso}')">${d}</div>`; }
   const head=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(x=>`<div>${x}</div>`).join('');
-  cont.innerHTML=`
-    <div class="toolbar">
-      <select onchange="dispFuncId=this.value; renderAgenda()">${funcOpts}</select>
-      <select onchange="setMes(this.value)">${mesOpts}</select>
-    </div>
-    <div class="card" style="border-left-color:${corFunc(f.id)}">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>
-        <div><b>${esc(f.nome)}</b><div class="hint" style="margin:2px 0 0">Toque nos dias que pode trabalhar — <b style="color:var(--green)">${qtd} dia(s)</b> em ${esc(mes.nome)}</div></div>
-      </div>
-    </div>
-    <div class="cal-head">${head}</div>
-    <div class="cal-grid">${cells}</div>`;
+  cont.innerHTML=`<div class="toolbar"><select onchange="dispFuncId=this.value; renderAgenda()">${funcOpts}</select><select onchange="setMes(this.value)">${mesOpts}</select></div>
+    <div class="card" style="border-left:4px solid ${corFunc(f.id)}"><div style="display:flex;align-items:center;gap:10px"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span><div><b>${esc(f.nome)}</b><div class="hint" style="margin:2px 0 0">Toque nos dias que pode trabalhar — <b style="color:var(--green)">${qtd} dia(s)</b> em ${esc(mes.nome)}</div></div></div></div>
+    <div class="cal-head">${head}</div><div class="cal-grid">${cells}</div>
+    <div class="hint">💡 Em breve: além da disponibilidade, montar a <b>escala</b> de quem trabalha em cada evento.</div>`;
 }
 
-/* ---------- Funcionários (+ pagamento) ---------- */
-function openFunc(id){
-  let f=null; if(id) f=funcById(id);
-  document.getElementById('funcTitulo').textContent=f?'Editar funcionário':'Novo funcionário';
-  document.getElementById('fId').value=f?f.id:'';
-  document.getElementById('fNome').value=f?f.nome:'';
-  document.getElementById('fValor').value=f?f.valorHora:'';
-  document.getElementById('btnExcluirFunc').style.display=f?'':'none';
-  document.getElementById('overlayFunc').classList.add('open');
-  setTimeout(()=>document.getElementById('fNome').focus(),50);
-}
+/* ---------- Funcionários ---------- */
+function openFunc(id){ let f=null; if(id) f=funcById(id); document.getElementById('funcTitulo').textContent=f?'Editar funcionário':'Novo funcionário'; document.getElementById('fId').value=f?f.id:''; document.getElementById('fNome').value=f?f.nome:''; document.getElementById('fValor').value=f?f.valorHora:''; document.getElementById('btnExcluirFunc').style.display=f?'':'none'; document.getElementById('overlayFunc').classList.add('open'); setTimeout(()=>document.getElementById('fNome').focus(),50); }
 function closeFunc(){ document.getElementById('overlayFunc').classList.remove('open'); }
 document.getElementById('overlayFunc').addEventListener('click',e=>{ if(e.target.id==='overlayFunc') closeFunc(); });
-function salvarFunc(){
-  const nome=document.getElementById('fNome').value.trim();
-  if(!nome){ alert('Digite o nome.'); return; }
-  const valor=parseFloat(document.getElementById('fValor').value)||0;
-  const id=document.getElementById('fId').value;
-  if(id){ const f=funcById(id); f.nome=nome; f.valorHora=valor; }
-  else { db.funcionarios.push({ id:uid('f'), nome, valorHora:valor }); }
-  save(); closeFunc(); renderTudo();
-}
-function excluirFunc(){
-  const id=document.getElementById('fId').value;
-  if(!confirm('Excluir este funcionário? As horas dele nos registros deixam de ser contabilizadas.')) return;
-  db.funcionarios=db.funcionarios.filter(f=>f.id!==id);
-  save(); closeFunc(); renderTudo();
-}
+function salvarFunc(){ const nome=document.getElementById('fNome').value.trim(); if(!nome){ alert('Digite o nome.'); return; } const valor=parseFloat(document.getElementById('fValor').value)||0; const id=document.getElementById('fId').value; if(id){ const f=funcById(id); f.nome=nome; f.valorHora=valor; } else { db.funcionarios.push({ id:uid('f'), nome, valorHora:valor }); } save(); closeFunc(); renderAtual(); }
+function excluirFunc(){ const id=document.getElementById('fId').value; if(!confirm('Excluir este funcionário?')) return; db.funcionarios=db.funcionarios.filter(f=>f.id!==id); save(); closeFunc(); renderAtual(); }
 function renderFuncionarios(){
   const el=document.getElementById('lista-funcionarios');
-  if(!db.funcionarios.length){ el.innerHTML='<div class="empty"><div class="big">👥</div>Nenhum funcionário.<br>Clique em <b>+ Novo funcionário</b>.</div>'; return; }
+  if(!db.funcionarios.length){ el.innerHTML='<div class="empty"><div class="big">👥</div>Nenhum funcionário.</div>'; return; }
   const mes=mesById(mesAtualId); const nomeMes=mes?mes.nome:'';
   el.innerHTML='<div class="pay-grid">'+db.funcionarios.map(f=>{
-    const hMes=mes?horasFuncMes(mes,f.id):0; const pagar=hMes*(+f.valorHora||0);
-    let hAno=0; db.meses.forEach(m=>hAno+=horasFuncMes(m,f.id));
-    return `<div class="pay-card">
-      <div class="nome"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div>
+    const hMes=mes?horasFuncMes(mes,f.id):0; const pagar=hMes*(+f.valorHora||0); let hAno=0; db.meses.forEach(m=>hAno+=horasFuncMes(m,f.id));
+    return `<div class="pay-card"><div class="nome"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div>
       <div class="linha"><span>Valor/hora</span><b style="color:var(--text)">${money(f.valorHora)}</b></div>
       <div class="linha"><span>Horas em ${esc(nomeMes)}</span><b style="color:var(--text)">${fmtHoras(hMes)}</b></div>
       <div class="linha"><span>Horas no ano</span><b style="color:var(--text)">${fmtHoras(hAno)}</b></div>
-      <div class="linha" style="margin-top:6px"><span>A pagar em ${esc(nomeMes)}</span><b class="total" style="margin:0">${money(pagar)}</b></div>
-      <div style="margin-top:12px"><button class="btn secondary small" onclick="openFunc('${f.id}')">Editar</button></div>
-    </div>`;
+      <div class="linha" style="margin-top:6px"><span>A pagar</span><b class="total">${money(pagar)}</b></div>
+      <div style="margin-top:12px"><button class="btn secondary small" onclick="openFunc('${f.id}')">Editar</button></div></div>`;
   }).join('')+'</div>';
+}
+
+/* ---------- Financeiro ---------- */
+function renderFinanceiro(){
+  const cont=document.getElementById('financeiro-conteudo'); const mes=mesById(mesAtualId);
+  if(!mes){ cont.innerHTML='<div class="empty"><div class="big">💰</div>Nenhum mês.</div>'; return; }
+  const linhas=db.funcionarios.map(f=>{ const h=horasFuncMes(mes,f.id); return `<tr><td class="dia"><span class="avatar" style="width:24px;height:24px;font-size:11px;display:inline-flex;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span> ${esc(f.nome)}</td><td>${money(f.valorHora)}</td><td>${fmtHoras(h)}</td><td class="tot">${money(h*(+f.valorHora||0))}</td></tr>`; }).join('');
+  const totH=db.funcionarios.reduce((s,f)=>s+horasFuncMes(mes,f.id),0);
+  cont.innerHTML=`<div class="tbl-wrap"><table class="planilha"><thead><tr><th style="text-align:left">Funcionário</th><th>Valor/hora</th><th>Horas</th><th>A pagar</th></tr></thead><tbody>${linhas}</tbody>
+    <tfoot><tr class="receber"><td style="text-align:left">Total — ${esc(mes.nome)}</td><td></td><td>${fmtHoras(totH)}</td><td>${money(totalPagarMes(mes))}</td></tr></tfoot></table></div>
+    <div class="hint">Resumo de pagamento do mês selecionado. Em breve: fechamento, recibos e relatórios.</div>`;
+}
+
+/* ---------- Em construção ---------- */
+function renderEmConstrucao(v){
+  const el=document.getElementById('page-'+v); const t=TITULOS[v];
+  const desc={ ponto:'Bater ponto: cada funcionário registra entrada e saída em tempo real, e o sistema calcula as horas automaticamente.', confirmacoes:'Confirmação de presença: cada pessoa confirma se vai ao evento; o painel mostra quem confirmou, quem não bateu ponto e quem faltou.', relatorios:'Relatórios: exportar horas e pagamento por período (PDF/planilha), por funcionário ou por evento.', funcoes:'Funções: cadastrar os papéis da equipe (Som, Transmissão, Projeção...) e atribuir a cada pessoa na escala.', config:'Configurações: definir código de acesso, nome da igreja, regras de hora extra e preferências.' };
+  el.innerHTML=`<div class="card" style="text-align:center; padding:50px 24px"><div style="font-size:46px">🚧</div><h2 style="margin:10px 0 6px">${esc(t[0])} — em construção</h2><p style="color:var(--muted); max-width:520px; margin:0 auto">${esc(desc[v]||'')}</p><div style="margin-top:18px"><button class="btn secondary" onclick="navegar('dashboard')">Voltar ao Dashboard</button></div></div>`;
 }
 
 /* ---------- Init ---------- */
 (async function boot(){
+  document.getElementById('dataHoje').textContent=dataExtenso();
   const ok=await carregarDoServidor();
-  if(db.meses.length) mesAtualId=db.meses[0].id;
+  if(db.meses.length){ const hoje=hojeISO(); const m=db.meses.find(x=>{ const {ano,mes}=mesAnoDe(x); return `${ano}-${String(mes).padStart(2,'0')}`===hoje.slice(0,7); }); mesAtualId=m?m.id:db.meses[0].id; }
   if(db.funcionarios.length) dispFuncId=db.funcionarios[0].id;
-  renderTudo();
+  navegar('dashboard');
   if(ok) setInterval(sincronizarBaixar,8000);
 })();
 </script>
