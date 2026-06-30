@@ -361,7 +361,7 @@ function renderDashboard(){
       <div class="dash-card"><div class="ico" style="background:var(--accent-soft)">📅</div><div><div class="big">${eventosHoje.length}</div><div class="lbl">Eventos hoje</div><div class="sub2">${esc(diaSemanaPT(hoje))}</div></div></div>
       <div class="dash-card"><div class="ico" style="background:var(--green-soft)">👥</div><div><div class="big">${db.funcionarios.length}</div><div class="lbl">Funcionários</div><div class="sub2">Equipe ativa</div></div></div>
       <div class="dash-card"><div class="ico" style="background:var(--amber-soft)">⏱️</div><div><div class="big">${fmtHoras(totHorasMes)}</div><div class="lbl">Horas no mês</div><div class="sub2">${esc(mes?mes.nome:'—')}</div></div></div>
-      <div class="dash-card"><div class="ico" style="background:#1c3a2b">💰</div><div><div class="big" style="font-size:20px;color:var(--green)">${money(valorMes)}</div><div class="lbl">A pagar</div><div class="sub2">${esc(mes?mes.nome:'—')}</div></div></div>
+      <div class="dash-card"><div class="ico" style="background:#1c3a2b">🗓️</div><div><div class="big">${mes?(mes.dias||[]).length:0}</div><div class="lbl">Dias no mês</div><div class="sub2">${esc(mes?mes.nome:'—')}</div></div></div>
     </div>`;
   const agendaHoje = eventosHoje.length
     ? eventosHoje.map(x=>{
@@ -373,7 +373,7 @@ function renderDashboard(){
   const prox = proximos.length
     ? proximos.map(x=>{ const n=db.funcionarios.filter(f=>(+regDe(x.dia,f.id).horas||0)>0).length; const [y,mm,dd]=(x.dia.data||'--').split('-'); return `<div class="ev-row"><div style="text-align:center;min-width:42px"><div style="font-size:18px;font-weight:700">${dd||'?'}</div><div class="sub2" style="color:var(--muted)">${esc((x.mes.nome||'').slice(0,3))}</div></div><div style="flex:1"><b>${esc(x.dia.evento)||'Evento'}</b><div class="sub2" style="color:var(--muted)">${esc(x.dia.diaSemana||diaSemanaPT(x.dia.data))}</div></div><span class="badge">${n} c/ horas</span></div>`; }).join('')
     : '<div class="sub2" style="color:var(--muted)">Sem eventos futuros.</div>';
-  const miniFunc=db.funcionarios.map(f=>{ const h=mes?horasFuncMes(mes,f.id):0; return `<div class="mini"><div class="n" style="font-size:16px">${esc(f.nome)}</div><div class="l">${fmtHoras(h)} · ${money(h*(+f.valorHora||0))}</div></div>`; }).join('');
+  const miniFunc=db.funcionarios.map(f=>{ const h=mes?horasFuncMes(mes,f.id):0; return `<div class="mini"><div class="n" style="font-size:16px">${esc(f.nome)}</div><div class="l">${fmtHoras(h)}</div></div>`; }).join('');
   cont.innerHTML = cards + `
     <div class="dash-grid">
       <div class="panel"><h3>Agenda de Hoje <span class="tag">${esc(diaSemanaPT(hoje))}</span></h3>${agendaHoje}
@@ -385,7 +385,7 @@ function renderDashboard(){
         <div class="mini-stats" style="margin-bottom:12px">
           <div class="mini"><div class="n" style="color:var(--accent)">${fmtHoras(totHorasMes)}</div><div class="l">Total de horas</div></div>
           <div class="mini"><div class="n">${db.funcionarios.length}</div><div class="l">Funcionários</div></div>
-          <div class="mini"><div class="n" style="color:var(--green)">${money(valorMes)}</div><div class="l">A pagar</div></div>
+          <div class="mini"><div class="n">${mes?(mes.dias||[]).length:0}</div><div class="l">Dias no mês</div></div>
         </div>
         <div class="mini-stats">${miniFunc}</div>
         <div style="margin-top:14px"><button class="btn secondary" style="width:100%" onclick="navegar('banco')">Ver banco de horas</button></div></div>
