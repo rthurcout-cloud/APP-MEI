@@ -748,7 +748,14 @@ function lerPlanilhaXLSX(buf){
     for(let r=13;r<=range.e.r+1;r++){
       const a=cellV(ws,'A'+r), b=cellV(ws,'B'+r);
       if(typeof a==='number' && diasSem.includes((''+b).trim())){
-        const reg={}; funcs.forEach(f=>{ const h=cellV(ws,colH[f.idx]+r); reg[f.idx]={ horas: h?Math.round((+h)*24*10000)/10000:0, entrada:fracHM(cellV(ws,colE[f.idx]+r)), saida:fracHM(cellV(ws,colS[f.idx]+r)) }; });
+        const reg={}; funcs.forEach(f=>{
+          const ef=cellV(ws,colE[f.idx]+r), sf=cellV(ws,colS[f.idx]+r), hc=cellV(ws,colH[f.idx]+r);
+          let entrada='', saida='', horas=0;
+          if(typeof ef==='number' && typeof sf==='number' && (ef>0 || sf>0)){
+            entrada=fracHM(ef); saida=fracHM(sf); let dif=sf-ef; if(dif<0) dif+=1; horas=Math.round(dif*24*10000)/10000;
+          } else if(hc){ horas=Math.round((+hc)*24*10000)/10000; }
+          reg[f.idx]={ horas, entrada, saida };
+        });
         dias.push({ data:serialISO(a), diaSemana:(''+b).trim(), evento:((cellV(ws,'C'+r)||'')+'').trim(), obs:((cellV(ws,'Q'+r)||'')+'').trim(), reg });
       }
     }
