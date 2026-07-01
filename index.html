@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg:#0b1020; --surface:#161b2e; --surface-2:#1e2740; --border:#2a3450;
@@ -709,6 +710,15 @@ function renderConfig(){
         <input type="file" id="impFile" accept="application/json" style="display:none" onchange="importBackup(event)">
       </div>
     </div>
+    <div class="card"><h3 style="margin:0 0 14px;font-size:16px">🔄 Sincronizar com a planilha do Google</h3>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 12px">Puxa as <b>horas</b> da sua planilha do Google (mão única: planilha → app). A escala, funções e ponto de confirmação são preservados. Mantenha a planilha compartilhada como <b>"qualquer pessoa com o link pode ver"</b>.</p>
+      <div class="field"><label>Link da planilha do Google</label><input type="text" id="cfgSheet" value="${esc(c.sheetUrl||'')}" placeholder="https://docs.google.com/spreadsheets/d/..."></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn secondary" onclick="salvarLinkSheet()">Salvar link</button>
+        <button class="btn" onclick="sincronizarPlanilha()">🔄 Sincronizar agora</button>
+      </div>
+      <div id="syncMsg" style="margin-top:12px;font-size:14px"></div>
+    </div>
     <div class="card"><h3 style="margin:0 0 8px;font-size:16px">ℹ️ Sobre</h3>
       <p style="color:var(--muted);font-size:13px;margin:0">Sistema de Escala e Horas — PIBN. Dados compartilhados e sincronizados entre dispositivos.</p>
     </div>`;
@@ -720,6 +730,73 @@ function salvarConfig(){
 function exportBackup(){ const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='backup-banco-horas-pibn.json'; a.click(); }
 function importBackup(ev){ const f=ev.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.funcionarios||!d.meses) throw 0; if(!confirm('Isto vai SUBSTITUIR todos os dados atuais (de todos) pelos do arquivo. Continuar?')) return; db=normalize(d); save(); if(db.meses.length) mesAtualId=db.meses[0].id; aplicarIdentidade(); renderAtual(); alert('Backup restaurado!'); }catch(e){ alert('Arquivo inválido.'); } }; r.readAsText(f); ev.target.value=''; }
 async function trocarCodigo(){ accessCode=''; localStorage.removeItem('bh-code'); const ok=await carregarDoServidor(); if(ok){ if(!mesById(mesAtualId)&&db.meses.length) mesAtualId=db.meses[0].id; aplicarIdentidade(); renderAtual(); } }
+
+/* ---------- Sincronização com a planilha do Google ---------- */
+function salvarLinkSheet(){ db.config=db.config||{}; db.config.sheetUrl=(document.getElementById('cfgSheet').value||'').trim(); save(); alert('Link salvo.'); }
+function cellV(ws,addr){ const c=ws[addr]; return c?c.v:undefined; }
+function serialISO(serial){ const ms=Math.round((serial-25569)*86400*1000); return new Date(ms).toISOString().slice(0,10); }
+function fracHM(frac){ if(frac==null||frac==='') return ''; const t=(+frac)*24; let h=Math.floor(t); let m=Math.round((t-h)*60); if(m===60){h++;m=0;} return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
+function lerPlanilhaXLSX(buf){
+  const wb=XLSX.read(buf,{type:'array'});
+  const diasSem=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  const colH=['D','E','F','G'], colE=['I','K','M','O'], colS=['J','L','N','P'];
+  let funcs=null; const meses=[];
+  wb.SheetNames.forEach(nome=>{
+    const ws=wb.Sheets[nome]; if(!ws) return;
+    if(!funcs){ funcs=[]; for(let i=0;i<4;i++){ const n=cellV(ws,'A'+(6+i)); const v=cellV(ws,'B'+(6+i)); if(n) funcs.push({idx:i, nome:(''+n).trim(), valor:parseFloat(v)||0}); } }
+    const dias=[]; const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
+    for(let r=13;r<=range.e.r+1;r++){
+      const a=cellV(ws,'A'+r), b=cellV(ws,'B'+r);
+      if(typeof a==='number' && diasSem.includes((''+b).trim())){
+        const reg={}; funcs.forEach(f=>{ const h=cellV(ws,colH[f.idx]+r); reg[f.idx]={ horas: h?Math.round((+h)*24*10000)/10000:0, entrada:fracHM(cellV(ws,colE[f.idx]+r)), saida:fracHM(cellV(ws,colS[f.idx]+r)) }; });
+        dias.push({ data:serialISO(a), diaSemana:(''+b).trim(), evento:((cellV(ws,'C'+r)||'')+'').trim(), obs:((cellV(ws,'Q'+r)||'')+'').trim(), reg });
+      }
+    }
+    meses.push({nome,dias});
+  });
+  return {funcs:funcs||[], meses};
+}
+function mesclarPlanilha(p){
+  p.funcs.forEach(pf=>{ const f=db.funcionarios.find(x=>(x.nome||'').toLowerCase()===pf.nome.toLowerCase()); if(f && pf.valor) f.valorHora=pf.valor; });
+  let atualizados=0, novos=0;
+  p.meses.forEach(pm=>{
+    let mes=db.meses.find(m=>(m.nome||'').toLowerCase()===pm.nome.toLowerCase());
+    if(!mes){ mes={id:uid('m'), nome:pm.nome, dias:[]}; db.meses.push(mes); }
+    if(!mes.dias) mes.dias=[];
+    pm.dias.forEach(pd=>{
+      const regApp={};
+      p.funcs.forEach(pf=>{ const f=db.funcionarios.find(x=>(x.nome||'').toLowerCase()===pf.nome.toLowerCase()); if(!f) return; const r=pd.reg[pf.idx]||{horas:0,entrada:'',saida:''}; regApp[f.id]={ entrada:r.entrada||'', saida:r.saida||'', horas:r.horas||0 }; });
+      const dia=mes.dias.find(d=>d.data===pd.data && (d.evento||'').toLowerCase()===(pd.evento||'').toLowerCase());
+      if(dia){ dia.diaSemana=pd.diaSemana; dia.evento=pd.evento; dia.obs=pd.obs; dia.reg=Object.assign(dia.reg||{}, regApp); atualizados++; }
+      else { mes.dias.push({ id:uid('d'), data:pd.data, diaSemana:pd.diaSemana, evento:pd.evento, obs:pd.obs, reg:regApp }); novos++; }
+    });
+  });
+  return {atualizados, novos};
+}
+async function sincronizarPlanilha(){
+  const inp=document.getElementById('cfgSheet');
+  const url=((inp&&inp.value)||(db.config&&db.config.sheetUrl)||'').trim();
+  if(!url){ alert('Cole o link da planilha do Google primeiro.'); return; }
+  const m=url.match(/\/d\/([a-zA-Z0-9_-]+)/); const id=m?m[1]:'';
+  if(!id){ alert('Link inválido. Use o link do Google Sheets (…/spreadsheets/d/ID/…).'); return; }
+  if(!window.XLSX){ alert('A leitura de planilha ainda está carregando. Aguarde 1-2s e tente de novo.'); return; }
+  if(!confirm('Isso vai atualizar as HORAS com o que está na planilha. A escala, funções e configurações são preservadas. Continuar?')) return;
+  const msg=document.getElementById('syncMsg'); const setMsg=(t,c)=>{ if(msg){ msg.innerHTML=c?`<span style="color:${c}">${t}</span>`:t; } };
+  db.config=db.config||{}; db.config.sheetUrl=url;
+  setMsg('Baixando a planilha…');
+  try{
+    const r=await fetch('/api/sheet?id='+encodeURIComponent(id), {headers:authHeaders()});
+    if(!r.ok){ let j={}; try{ j=await r.json(); }catch(e){} throw new Error(j.dica||('não consegui baixar (status '+r.status+')')); }
+    const buf=await r.arrayBuffer();
+    setMsg('Lendo os dados…');
+    const parsed=lerPlanilhaXLSX(buf);
+    const res=mesclarPlanilha(parsed);
+    save();
+    if(!mesById(mesAtualId)&&db.meses.length) mesAtualId=db.meses[0].id;
+    renderAtual();
+    setMsg(`✓ Sincronizado! ${res.atualizados} dia(s) atualizados, ${res.novos} novo(s). Funcionários e horas atualizados da planilha.`,'var(--green)');
+  }catch(e){ setMsg('Erro: '+esc(e.message||e),'var(--red)'); }
+}
 
 /* ---------- Em construção ---------- */
 function renderEmConstrucao(v){
