@@ -737,8 +737,7 @@ function cellV(ws,addr){ const c=ws[addr]; return c?c.v:undefined; }
 function serialISO(serial){ const ms=Math.round((serial-25569)*86400*1000); return new Date(ms).toISOString().slice(0,10); }
 function fracHM(frac){ if(frac==null||frac==='') return ''; const t=(+frac)*24; let h=Math.floor(t); let m=Math.round((t-h)*60); if(m===60){h++;m=0;} return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
 function lerPlanilhaXLSX(buf){
-  const wb=XLSX.read(buf,{type:'array'});
-  const diasSem=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  const wb=XLSX.read(buf,{type:'array', cellDates:false});
   const colH=['D','E','F','G'], colE=['I','K','M','O'], colS=['J','L','N','P'];
   let funcs=null; const meses=[];
   wb.SheetNames.forEach(nome=>{
