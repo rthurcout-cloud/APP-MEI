@@ -747,7 +747,7 @@ function lerPlanilhaXLSX(buf){
     const dias=[]; const range=XLSX.utils.decode_range(ws['!ref']||'A1:A1');
     for(let r=13;r<=range.e.r+1;r++){
       const a=cellV(ws,'A'+r), b=cellV(ws,'B'+r);
-      if(typeof a==='number' && diasSem.includes((''+b).trim())){
+      if(typeof a==='number' && a>40000){
         const reg={}; funcs.forEach(f=>{
           const ef=cellV(ws,colE[f.idx]+r), sf=cellV(ws,colS[f.idx]+r), hc=cellV(ws,colH[f.idx]+r);
           let entrada='', saida='', horas=0;
@@ -756,7 +756,8 @@ function lerPlanilhaXLSX(buf){
           } else if(hc){ horas=Math.round((+hc)*24*10000)/10000; }
           reg[f.idx]={ horas, entrada, saida };
         });
-        dias.push({ data:serialISO(a), diaSemana:(''+b).trim(), evento:((cellV(ws,'C'+r)||'')+'').trim(), obs:((cellV(ws,'Q'+r)||'')+'').trim(), reg });
+        const dsem=(b==null?'':(''+b)).trim();
+        dias.push({ data:serialISO(a), diaSemana: dsem||diaSemanaPT(serialISO(a)), evento:((cellV(ws,'C'+r)||'')+'').trim(), obs:((cellV(ws,'Q'+r)||'')+'').trim(), reg });
       }
     }
     meses.push({nome,dias});
@@ -773,7 +774,7 @@ function mesclarPlanilha(p){
     pm.dias.forEach(pd=>{
       const regApp={};
       p.funcs.forEach(pf=>{ const f=db.funcionarios.find(x=>(x.nome||'').toLowerCase()===pf.nome.toLowerCase()); if(!f) return; const r=pd.reg[pf.idx]||{horas:0,entrada:'',saida:''}; regApp[f.id]={ entrada:r.entrada||'', saida:r.saida||'', horas:r.horas||0 }; });
-      const dia=mes.dias.find(d=>d.data===pd.data && (d.evento||'').toLowerCase()===(pd.evento||'').toLowerCase());
+      const dia=mes.dias.find(d=>d.data===pd.data && (d.evento||'').trim().toLowerCase()===(pd.evento||'').trim().toLowerCase());
       if(dia){ dia.diaSemana=pd.diaSemana; dia.evento=pd.evento; dia.obs=pd.obs; dia.reg=Object.assign(dia.reg||{}, regApp); atualizados++; }
       else { mes.dias.push({ id:uid('d'), data:pd.data, diaSemana:pd.diaSemana, evento:pd.evento, obs:pd.obs, reg:regApp }); novos++; }
     });
