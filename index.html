@@ -84,6 +84,12 @@
   .chips { display:flex; gap:6px; flex-wrap:wrap; }
   .chip { background:var(--surface-2); border:1px solid var(--border); border-radius:20px; padding:4px 10px; font-size:12px; display:inline-flex; align-items:center; gap:6px; }
   .chip .dot { width:8px; height:8px; border-radius:50%; }
+  .esc-botoes { display:flex; gap:8px; flex-wrap:wrap; }
+  .esc-btn { display:inline-flex; align-items:center; gap:7px; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:22px; padding:9px 15px; cursor:pointer; font-size:14px; font-weight:500; transition:transform .1s; }
+  .esc-btn .dot { width:10px; height:10px; border-radius:50%; }
+  .esc-btn:hover { border-color:var(--accent); }
+  .esc-btn:active { transform:scale(.96); }
+  .esc-btn.on { background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:600; }
   .section-label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin:12px 0 8px; }
   .empty { text-align:center; color:var(--muted); padding:50px 20px; }
   .empty .big { font-size:42px; margin-bottom:8px; }
@@ -512,9 +518,17 @@ function renderEscala(boxId){
   const lista=dias.map(d=>{
     const arr=(d.escala||[]);
     const nConf=arr.filter(a=>a.confirmado).length;
-    const chips=arr.length? arr.map(a=>{ const f=funcById(a.funcId); if(!f) return ''; const fc=db.funcoes.find(x=>x.id===a.funcaoId); return `<span class="chip">${a.confirmado?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--muted)">○</span>'}<span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?` · <b style="color:${fc.cor}">${esc(fc.nome)}</b>`:''}</span>`; }).join('') : '<span class="hint" style="margin:0">Ninguém escalado ainda</span>';
-    const conftag = arr.length? `<span class="badge ${nConf===arr.length?'green':'amber'}">${nConf}/${arr.length} confirmados</span>` : '';
-    return `<div class="card"><div class="card-head" style="align-items:center"><div style="flex:1;min-width:0"><b>${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:2px 0 0">${fmtData(d.data)}</div></div>${conftag}<button class="btn secondary small" onclick="openEscala('${d.id}')">Editar escala</button></div><div class="chips" style="margin-top:10px">${chips}</div></div>`;
+    const botoes=db.funcionarios.map(f=>{ const a=arr.find(x=>x.funcId===f.id); const on=!!a; const fc=(a&&a.funcaoId)?db.funcoes.find(x=>x.id===a.funcaoId):null; return `<button class="esc-btn ${on?'on':''}" onclick="toggleEscalaFunc('${d.id}','${f.id}')"><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${on?' ✓':''}</button>`; }).join('');
+    const conftag = arr.length? `<span class="badge ${nConf===arr.length?'green':'amber'}">${nConf}/${arr.length}</span>` : '';
+    return `<div class="card">
+      <div class="card-head" style="align-items:center">
+        <div style="flex:1;min-width:0"><b>${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:2px 0 0">${fmtData(d.data)}</div></div>
+        ${conftag}
+        <button class="btn secondary small" onclick="openEscala('${d.id}')">Função / confirmar</button>
+      </div>
+      <div class="hint" style="margin:12px 0 8px">Toque no seu nome para marcar que pode trabalhar:</div>
+      <div class="esc-botoes">${botoes}</div>
+    </div>`;
   }).join('');
   box.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div>`+(dias.length?lista:'<div class="empty"><div class="big">🗓️</div>Nenhum evento neste mês.<br>Crie eventos no <b>Banco de Horas</b> (+ Novo dia).</div>');
 }
@@ -527,6 +541,14 @@ function openEscala(diaId){
   const optsFuncao=sel=>`<option value="">— não escalado —</option><option value="__sem__" ${sel==='__sem__'?'selected':''}>Escalado (sem função)</option>`+db.funcoes.map(x=>`<option value="${x.id}" ${sel===x.id?'selected':''}>${esc(x.nome)}</option>`).join('');
   document.getElementById('escRows').innerHTML=db.funcionarios.map(f=>`<div class="func-row" style="grid-template-columns:1fr 1.1fr auto"><div class="fn"><span class="avatar" style="width:26px;height:26px;font-size:12px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><select id="esc-${f.id}">${optsFuncao(atual[f.id]||'')}</select><label class="conf-lbl"><input type="checkbox" id="conf-${f.id}" ${atualConf[f.id]?'checked':''}> confirmou</label></div>`).join('');
   document.getElementById('overlayEscala').classList.add('open');
+}
+function toggleEscalaFunc(diaId, fid){
+  const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
+  if(!d.escala) d.escala=[];
+  const i=d.escala.findIndex(a=>a.funcId===fid);
+  if(i>=0) d.escala.splice(i,1);
+  else d.escala.push({funcId:fid, funcaoId:'', confirmado:false});
+  save(); renderAgenda();
 }
 function closeEscala(){ document.getElementById('overlayEscala').classList.remove('open'); }
 document.getElementById('overlayEscala').addEventListener('click',e=>{ if(e.target.id==='overlayEscala') closeEscala(); });
