@@ -97,6 +97,18 @@
   .escala-grid .esc-botoes { flex-direction:column; gap:6px; }
   .escala-grid .esc-btn { width:100%; justify-content:flex-start; padding:7px 10px; font-size:13px; border-radius:8px; }
   .mini-link { font-size:11px; color:var(--accent); cursor:pointer; margin-top:10px; display:inline-block; }
+  .cal-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+  .cal-head, .cal-grid { display:grid; grid-template-columns:repeat(7,minmax(132px,1fr)); gap:8px; min-width:920px; }
+  .cal-head { margin-bottom:8px; }
+  .cal-col { text-align:center; color:var(--muted); font-size:12px; font-weight:600; padding:4px 0; }
+  .cal-cel { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px; min-height:64px; }
+  .cal-cel.vazio { background:none; border:none; }
+  .cal-num { color:var(--muted); font-size:12px; font-weight:700; margin-bottom:4px; }
+  .cal-ev { border-top:1px solid var(--border); padding-top:8px; margin-top:8px; }
+  .cal-ev:first-of-type { border-top:none; padding-top:2px; margin-top:2px; }
+  .cal-ev-nome { font-size:12px; font-weight:600; margin-bottom:6px; line-height:1.25; }
+  .cal-ev .esc-botoes { flex-direction:column; gap:5px; }
+  .cal-ev .esc-btn { width:100%; justify-content:flex-start; padding:6px 8px; font-size:12px; border-radius:7px; }
   .section-label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin:12px 0 8px; }
   .empty { text-align:center; color:var(--muted); padding:50px 20px; }
   .empty .big { font-size:42px; margin-bottom:8px; }
@@ -518,25 +530,32 @@ function renderDisp(boxId){
     <div class="card" style="border-left:4px solid ${corFunc(f.id)}"><div style="display:flex;align-items:center;gap:10px"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span><div><b>${esc(f.nome)}</b><div class="hint" style="margin:2px 0 0">Toque nos dias que pode trabalhar — <b style="color:var(--green)">${qtd} dia(s)</b> em ${esc(mes.nome)}</div></div></div></div>
     <div class="cal-head">${head}</div><div class="cal-grid">${cells}</div>`;
 }
+function montarBlocoEscala(d){
+  const arr=(d.escala||[]);
+  const nConf=arr.filter(a=>a.confirmado).length;
+  const botoes=db.funcionarios.map(f=>{ const a=arr.find(x=>x.funcId===f.id); const on=!!a; const fc=(a&&a.funcaoId)?db.funcoes.find(x=>x.id===a.funcaoId):null; return `<button class="esc-btn ${on?'on':''}" onclick="toggleEscalaFunc('${d.id}','${f.id}')"><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${on?' ✓':''}</button>`; }).join('');
+  const conftag = arr.length? `<span class="badge ${nConf===arr.length?'green':'amber'}" style="font-size:9px;padding:1px 6px">${nConf}/${arr.length}</span>` : '';
+  return `<div class="cal-ev"><div class="cal-ev-nome">${esc(d.evento)||'Evento'} ${conftag}</div><div class="esc-botoes">${botoes}</div><span class="mini-link" onclick="openEscala('${d.id}')">⚙ função</span></div>`;
+}
 function renderEscala(boxId){
   const box=document.getElementById(boxId); const mes=mesById(mesAtualId);
   const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
-  const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
-  const lista=dias.map(d=>{
-    const arr=(d.escala||[]);
-    const nConf=arr.filter(a=>a.confirmado).length;
-    const botoes=db.funcionarios.map(f=>{ const a=arr.find(x=>x.funcId===f.id); const on=!!a; const fc=(a&&a.funcaoId)?db.funcoes.find(x=>x.id===a.funcaoId):null; return `<button class="esc-btn ${on?'on':''}" onclick="toggleEscalaFunc('${d.id}','${f.id}')"><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${on?' ✓':''}</button>`; }).join('');
-    const conftag = arr.length? `<span class="badge ${nConf===arr.length?'green':'amber'}" style="font-size:10px;padding:1px 7px">${nConf}/${arr.length}</span>` : '';
-    const p=(d.data||'--').split('-');
-    const ds=(d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase();
-    return `<div class="card">
-      <div class="ev-nome">${esc(d.evento)||'Evento'} ${conftag}</div>
-      <div class="ev-data">${ds} ${p[2]||'?'}/${p[1]||'?'}</div>
-      <div class="esc-botoes">${botoes}</div>
-      <span class="mini-link" onclick="openEscala('${d.id}')">⚙ função / confirmar</span>
-    </div>`;
-  }).join('');
-  box.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div>`+(dias.length?('<div class="escala-grid">'+lista+'</div>'):'<div class="empty"><div class="big">🗓️</div>Nenhum evento neste mês.<br>Crie eventos no <b>Banco de Horas</b> (+ Novo dia).</div>');
+  const dias=(mes.dias||[]);
+  const cab=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div>`;
+  if(!dias.length){ box.innerHTML=cab+'<div class="empty"><div class="big">🗓️</div>Nenhum evento neste mês.<br>Crie eventos no <b>Banco de Horas</b> (+ Novo dia).</div>'; return; }
+  const porData={}; dias.forEach(d=>{ (porData[d.data]=porData[d.data]||[]).push(d); });
+  const {ano,mes:mm}=mesAnoDe(mes);
+  const offset=(new Date(ano,mm-1,1).getDay()+6)%7; // 0 = segunda-feira
+  const nd=new Date(ano,mm,0).getDate();
+  const head=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(x=>`<div class="cal-col">${x}</div>`).join('');
+  let cells='';
+  for(let i=0;i<offset;i++) cells+='<div class="cal-cel vazio"></div>';
+  for(let day=1;day<=nd;day++){
+    const iso=`${ano}-${String(mm).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const evs=(porData[iso]||[]);
+    cells+=`<div class="cal-cel"><div class="cal-num">${day}</div>${evs.map(montarBlocoEscala).join('')}</div>`;
+  }
+  box.innerHTML=cab+`<div class="cal-wrap"><div class="cal-head">${head}</div><div class="cal-grid">${cells}</div></div><div class="hint" style="margin-top:8px">📱 No celular, deslize a tabela para o lado para ver a semana inteira.</div>`;
 }
 function openEscala(diaId){
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
