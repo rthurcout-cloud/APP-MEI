@@ -385,7 +385,7 @@ function fazerLogin(){
 function logout(){ usuarioAtual=null; localStorage.removeItem('bh-user'); popularLoginUsers(); document.getElementById('loginSenha').value=''; document.getElementById('overlayLogin').style.display='flex'; fecharMenu(); }
 function aplicarPermissoes(){
   const admin=ehAdmin();
-  document.querySelectorAll('.nav-item').forEach(it=>{ const v=it.dataset.view; if(!v) return; let show; if(admin){ show=(v!=='minhas'); } else { show=(v==='agenda'||v==='minhas'); } it.style.display=show?'':'none'; });
+  document.querySelectorAll('.nav-item').forEach(it=>{ const v=it.dataset.view; if(!v) return; let show; if(admin){ show=(v!=='minhas'); } else { show=(v==='agenda'||v==='minhas'||v==='ponto'); } it.style.display=show?'':'none'; });
   if(usuarioAtual){ const un=document.getElementById('userNome'); if(un) un.textContent=usuarioAtual.nome; const uc=document.getElementById('userCargo'); if(uc) uc.textContent=admin?'Administrador':'Funcionário'; const ua=document.getElementById('userAv'); if(ua) ua.textContent=iniciais(usuarioAtual.nome); }
 }
 
@@ -416,7 +416,7 @@ const PAGES=['dashboard','agenda','funcionarios','ponto','confirmacoes','banco',
 const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Dias que cada funcionário pode trabalhar.'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Funções da equipe (Som, Transmissão...).'], config:['Configurações','Ajustes do sistema.'], minhas:['Minhas horas','Suas horas e valor a receber.'] };
 let viewAtual='dashboard';
 function navegar(v){
-  if(usuarioAtual && !ehAdmin() && !['agenda','minhas'].includes(v)) v='agenda';
+  if(usuarioAtual && !ehAdmin() && !['agenda','minhas','ponto'].includes(v)) v='agenda';
   if(!TITULOS[v]) v='agenda';
   viewAtual=v;
   PAGES.forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display=(p===v)?'':'none'; });
@@ -753,7 +753,7 @@ function renderPonto(){
   const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
   const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const cards=dias.map(d=>{
-    const ids=(d.escala&&d.escala.length)? d.escala.map(a=>a.funcId): db.funcionarios.map(f=>f.id);
+    const ids=(!ehAdmin()&&usuarioAtual&&usuarioAtual.funcId)?[usuarioAtual.funcId]:((d.escala&&d.escala.length)? d.escala.map(a=>a.funcId): db.funcionarios.map(f=>f.id));
     const rows=ids.map(fid=>{ const f=funcById(fid); if(!f) return ''; const r=regDe(d,fid); const bateu=r.entrada&&r.saida;
       return `<div class="pt-row"><div class="nm"><span class="avatar" style="width:20px;height:20px;font-size:10px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'} bd">${bateu?fmtHoras(r.horas):'falta'}</span></div>`; }).join('');
     const p=(d.data||'--').split('-');
@@ -762,6 +762,7 @@ function renderPonto(){
   el.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div><div class="hint" style="margin-bottom:12px">Preencha <b>entrada</b> e <b>saída</b> de cada pessoa por dia — as horas são calculadas e vão para o Banco de Horas. Quando faltam horários, marca <b>"falta"</b>.</div>`+(dias.length?('<div class="ponto-grid">'+cards+'</div>'):'<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.</div>');
 }
 function setPonto(diaId, fid, campo, val){
+  if(usuarioAtual && !ehAdmin() && fid!==usuarioAtual.funcId) return;
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
   if(!d.reg) d.reg={}; if(!d.reg[fid]) d.reg[fid]={entrada:'',saida:'',horas:0};
   d.reg[fid][campo]=val;
