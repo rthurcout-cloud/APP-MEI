@@ -394,6 +394,7 @@ function renderDashboard(){
   const hoje=hojeISO();
   const eventosHoje=todosDias().filter(x=>x.dia.data===hoje);
   const mes=mesById(mesAtualId);
+  const _ma=mes?mesAnoDe(mes):null; const diasCal=_ma? new Date(_ma.ano,_ma.mes,0).getDate():0;
   const totHorasMes=mes? db.funcionarios.reduce((s,f)=>s+horasFuncMes(mes,f.id),0):0;
   const valorMes=mes? totalPagarMes(mes):0;
   const proximos=todosDias().filter(x=>(x.dia.data||'')>=hoje).sort((a,b)=>(a.dia.data||'').localeCompare(b.dia.data||'')).slice(0,5);
@@ -402,7 +403,7 @@ function renderDashboard(){
       <div class="dash-card"><div class="ico" style="background:var(--accent-soft)">📅</div><div><div class="big">${eventosHoje.length}</div><div class="lbl">Eventos hoje</div><div class="sub2">${esc(diaSemanaPT(hoje))}</div></div></div>
       <div class="dash-card"><div class="ico" style="background:var(--green-soft)">👥</div><div><div class="big">${db.funcionarios.length}</div><div class="lbl">Funcionários</div><div class="sub2">Equipe ativa</div></div></div>
       <div class="dash-card"><div class="ico" style="background:var(--amber-soft)">⏱️</div><div><div class="big">${fmtHoras(totHorasMes)}</div><div class="lbl">Horas no mês</div><div class="sub2">${esc(mes?mes.nome:'—')}</div></div></div>
-      <div class="dash-card"><div class="ico" style="background:#1c3a2b">🗓️</div><div><div class="big">${mes?(mes.dias||[]).length:0}</div><div class="lbl">Dias no mês</div><div class="sub2">${esc(mes?mes.nome:'—')}</div></div></div>
+      <div class="dash-card"><div class="ico" style="background:#1c3a2b">🗓️</div><div><div class="big">${diasCal}</div><div class="lbl">Dias no mês</div><div class="sub2">${esc(mes?mes.nome:'—')}</div></div></div>
     </div>`;
   const agendaHoje = eventosHoje.length
     ? eventosHoje.map(x=>{
@@ -434,11 +435,6 @@ function renderDashboard(){
   }
   if(!temSem) semanaRows='<div class="sub2" style="color:var(--muted)">Nenhum evento com escala nesta semana.</div>';
   cont.innerHTML = cards + `
-    <div class="dash-grid">
-      <div class="panel"><h3>Agenda de Hoje <span class="tag">${esc(diaSemanaPT(hoje))}</span></h3>${agendaHoje}
-        <div style="margin-top:14px"><button class="btn secondary" style="width:100%" onclick="navegar('agenda')">Ver agenda / escala</button></div></div>
-      <div class="panel"><h3>Próximos Eventos</h3>${prox}</div>
-    </div>
     <div class="panel" style="margin-top:16px"><h3>Resumo da Semana — quem vai trabalhar <span class="tag">${semRange}</span></h3>${semanaRows}
       <div style="margin-top:12px"><button class="btn secondary" style="width:100%" onclick="navegar('agenda')">Editar escala da semana</button></div></div>
     <div class="dash-grid">
@@ -446,7 +442,7 @@ function renderDashboard(){
         <div class="mini-stats" style="margin-bottom:12px">
           <div class="mini"><div class="n" style="color:var(--accent)">${fmtHoras(totHorasMes)}</div><div class="l">Total de horas</div></div>
           <div class="mini"><div class="n">${db.funcionarios.length}</div><div class="l">Funcionários</div></div>
-          <div class="mini"><div class="n">${mes?(mes.dias||[]).length:0}</div><div class="l">Dias no mês</div></div>
+          <div class="mini"><div class="n">${diasCal}</div><div class="l">Dias no mês</div></div>
         </div>
         <div class="mini-stats">${miniFunc}</div>
         <div style="margin-top:14px"><button class="btn secondary" style="width:100%" onclick="navegar('banco')">Ver banco de horas</button></div></div>
