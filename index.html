@@ -764,13 +764,17 @@ function renderPonto(){
   const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
   const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const cards=dias.map(d=>{
-    const ids=(!ehAdmin()&&usuarioAtual&&usuarioAtual.funcId)?[usuarioAtual.funcId]:((d.escala&&d.escala.length)? d.escala.map(a=>a.funcId): db.funcionarios.map(f=>f.id));
+    const escIds=(d.escala||[]).map(a=>a.funcId);
+    const regIds=Object.keys(d.reg||{}).filter(k=>{const r=d.reg[k]; return r&&(r.entrada||r.saida||(+r.horas>0));});
+    let ids=[...new Set([...escIds,...regIds])];
+    if(!ehAdmin()&&usuarioAtual&&usuarioAtual.funcId) ids=ids.filter(i=>i===usuarioAtual.funcId);
     const rows=ids.map(fid=>{ const f=funcById(fid); if(!f) return ''; const r=regDe(d,fid); const bateu=r.entrada&&r.saida;
-      return `<div class="pt-row"><div class="nm"><span class="avatar" style="width:20px;height:20px;font-size:10px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'} bd">${bateu?fmtHoras(r.horas):'falta'}</span></div>`; }).join('');
+      return `<div class="pt-row"><div class="nm"><span class="avatar" style="width:20px;height:20px;font-size:10px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'} bd">${bateu?fmtHoras(r.horas):'falta'}</span></div>`; }).filter(Boolean).join('');
+    const vazio=`<div class="pt-row" style="color:var(--muted);justify-content:center;padding:10px 0">${(!ehAdmin()&&usuarioAtual)?'Você não está escalado neste dia':'Ninguém escalado neste dia'}</div>`;
     const p=(d.data||'--').split('-');
-    return `<div class="card pt-card"><div class="pt-head"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:0">${p[2]||'?'}/${p[1]||'?'} · ${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="pt-row pt-cab"><span>Equipe</span><span>Ent</span><span>Saí</span><span>Hrs</span></div>${rows}</div>`;
+    return `<div class="card pt-card"><div class="pt-head"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:0">${p[2]||'?'}/${p[1]||'?'} · ${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="pt-row pt-cab"><span>Equipe</span><span>Ent</span><span>Saí</span><span>Hrs</span></div>${rows||vazio}</div>`;
   }).join('');
-  el.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div><div class="hint" style="margin-bottom:12px">Preencha <b>entrada</b> e <b>saída</b> de cada pessoa por dia — as horas são calculadas e vão para o Banco de Horas. Quando faltam horários, marca <b>"falta"</b>.</div>`+(dias.length?('<div class="ponto-grid">'+cards+'</div>'):'<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.</div>');
+  el.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div><div class="hint" style="margin-bottom:12px">Aparecem só as pessoas <b>escaladas</b> de cada dia (definidas na Escala). Preencha <b>entrada</b> e <b>saída</b> — as horas são calculadas e vão para o Banco de Horas. Quando faltam horários, marca <b>"falta"</b>.</div>`+(dias.length?('<div class="ponto-grid">'+cards+'</div>'):'<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.</div>');
 }
 function setPonto(diaId, fid, campo, val){
   if(usuarioAtual && !ehAdmin() && fid!==usuarioAtual.funcId) return;
