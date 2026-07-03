@@ -109,6 +109,16 @@
   .cal-ev-nome { font-size:12px; font-weight:600; margin-bottom:6px; line-height:1.25; }
   .cal-ev .esc-botoes { flex-direction:column; gap:5px; }
   .cal-ev .esc-btn { width:100%; justify-content:flex-start; padding:6px 8px; font-size:12px; border-radius:7px; }
+  /* Zoom do calendário da Escala (controle no celular) */
+  .cal-wrap .cal-head, .cal-wrap .cal-grid { grid-template-columns:repeat(7,minmax(var(--cal-col,132px),1fr)); min-width:calc(var(--cal-col,132px) * 7 + 60px); }
+  .cal-wrap .cal-cel { padding:clamp(3px,calc(var(--cal-col,132px)/22),8px); min-height:calc(var(--cal-col,132px)/2); }
+  .cal-wrap .cal-num { font-size:clamp(10px,calc(var(--cal-col,132px)/12),12px); }
+  .cal-wrap .cal-ev-nome { font-size:clamp(9px,calc(var(--cal-col,132px)/11),12px); }
+  .cal-wrap .esc-btn { font-size:clamp(9px,calc(var(--cal-col,132px)/11),12px); padding:clamp(3px,calc(var(--cal-col,132px)/22),6px) clamp(4px,calc(var(--cal-col,132px)/18),8px); }
+  .cal-wrap .esc-btn .dot { flex-shrink:0; }
+  .zoomctl { display:flex; align-items:center; gap:6px; margin-left:auto; }
+  .zoomctl span { color:var(--muted); font-size:12px; }
+  .zoomctl button { padding:5px 12px; font-size:16px; line-height:1; min-width:36px; }
   .section-label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin:12px 0 8px; }
   .empty { text-align:center; color:var(--muted); padding:50px 20px; }
   .empty .big { font-size:42px; margin-bottom:8px; }
@@ -629,11 +639,15 @@ function montarBlocoEscala(d){
   const link = admin? `<span class="mini-link" onclick="openEscala('${d.id}')">⚙ função</span>` : '';
   return `<div class="cal-ev"><div class="cal-ev-nome">${esc(d.evento)||'Evento'} ${conftag}</div><div class="esc-botoes">${botoes}</div>${link}</div>`;
 }
+let calCol = parseInt(localStorage.getItem('bh-calcol')||'',10);
+function aplicarCalZoom(){ if(!calCol||isNaN(calCol)) calCol=(window.innerWidth<=640?92:132); calCol=Math.max(46,Math.min(176,calCol)); document.documentElement.style.setProperty('--cal-col',calCol+'px'); }
+function calZoomStep(dir){ if(!calCol||isNaN(calCol)) aplicarCalZoom(); calCol=Math.max(46,Math.min(176,calCol+dir*20)); localStorage.setItem('bh-calcol',String(calCol)); document.documentElement.style.setProperty('--cal-col',calCol+'px'); }
 function renderEscala(boxId){
   const box=document.getElementById(boxId); const mes=mesById(mesAtualId);
+  aplicarCalZoom();
   const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
   const dias=(mes.dias||[]);
-  const cab=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div>`;
+  const cab=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select><div class="zoomctl"><span>Zoom</span><button class="btn secondary" onclick="calZoomStep(-1)" aria-label="Diminuir">−</button><button class="btn secondary" onclick="calZoomStep(1)" aria-label="Aumentar">+</button></div></div>`;
   if(!dias.length){ box.innerHTML=cab+'<div class="empty"><div class="big">🗓️</div>Nenhum evento neste mês.<br>Crie eventos no <b>Banco de Horas</b> (+ Novo dia).</div>'; return; }
   const porData={}; dias.forEach(d=>{ (porData[d.data]=porData[d.data]||[]).push(d); });
   const {ano,mes:mm}=mesAnoDe(mes);
@@ -647,7 +661,7 @@ function renderEscala(boxId){
     const evs=(porData[iso]||[]);
     cells+=`<div class="cal-cel"><div class="cal-num">${day}</div>${evs.map(montarBlocoEscala).join('')}</div>`;
   }
-  box.innerHTML=cab+`<div class="cal-wrap"><div class="cal-head">${head}</div><div class="cal-grid">${cells}</div></div><div class="hint" style="margin-top:8px">📱 No celular, deslize a tabela para o lado para ver a semana inteira.</div>`;
+  box.innerHTML=cab+`<div class="cal-wrap"><div class="cal-head">${head}</div><div class="cal-grid">${cells}</div></div><div class="hint" style="margin-top:8px">📱 No celular, use os botões <b>−</b> / <b>+</b> (Zoom) para diminuir e fazer a semana caber na tela, ou deslize para o lado.</div>`;
 }
 function openEscala(diaId){
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
