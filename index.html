@@ -417,12 +417,30 @@ function renderDashboard(){
     ? proximos.map(x=>{ const n=db.funcionarios.filter(f=>(+regDe(x.dia,f.id).horas||0)>0).length; const [y,mm,dd]=(x.dia.data||'--').split('-'); return `<div class="ev-row"><div style="text-align:center;min-width:42px"><div style="font-size:18px;font-weight:700">${dd||'?'}</div><div class="sub2" style="color:var(--muted)">${esc((x.mes.nome||'').slice(0,3))}</div></div><div style="flex:1"><b>${esc(x.dia.evento)||'Evento'}</b><div class="sub2" style="color:var(--muted)">${esc(x.dia.diaSemana||diaSemanaPT(x.dia.data))}</div></div><span class="badge">${n} c/ horas</span></div>`; }).join('')
     : '<div class="sub2" style="color:var(--muted)">Sem eventos futuros.</div>';
   const miniFunc=db.funcionarios.map(f=>{ const h=mes?horasFuncMes(mes,f.id):0; return `<div class="mini"><div class="n" style="font-size:16px">${esc(f.nome)}</div><div class="l">${fmtHoras(h)}</div></div>`; }).join('');
+  // Resumo da semana (segunda a domingo da semana atual)
+  const _hj=new Date(); const _off=(_hj.getDay()+6)%7; const _ini=new Date(_hj); _ini.setDate(_hj.getDate()-_off); _ini.setHours(0,0,0,0);
+  const nomesDia=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  const ddmm=(dt)=>`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+  const isoDe=(dt)=>`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  const _fim=new Date(_ini); _fim.setDate(_ini.getDate()+6);
+  const semRange=`${ddmm(_ini)} a ${ddmm(_fim)}`;
+  let semanaRows=''; let temSem=false;
+  for(let i=0;i<7;i++){ const dt=new Date(_ini); dt.setDate(_ini.getDate()+i); const iso=isoDe(dt);
+    const evs=todosDias().filter(x=>x.dia.data===iso);
+    if(!evs.length) continue; temSem=true;
+    const inner=evs.map(x=>{ const arr=(x.dia.escala||[]); const chips=arr.length? arr.map(a=>{ const f=funcById(a.funcId); if(!f) return ''; return `<span class="badge" style="background:${corFunc(f.id)}22;color:${corFunc(f.id)}">${a.confirmado?'✓ ':''}${esc(f.nome)}</span>`; }).join(' ') : '<span class="sub2" style="color:var(--muted)">ninguém marcado</span>'; return `<div style="margin:3px 0"><b style="font-size:13px">${esc(x.dia.evento)||'Evento'}</b> — ${chips}</div>`; }).join('');
+    const eHoje = iso===hojeISO();
+    semanaRows+=`<div class="ev-row"><div style="min-width:62px;${eHoje?'border-left:3px solid var(--accent);padding-left:7px':''}"><b>${nomesDia[i].slice(0,3)}</b><div class="sub2" style="color:var(--muted)">${ddmm(dt)}</div></div><div style="flex:1">${inner}</div></div>`;
+  }
+  if(!temSem) semanaRows='<div class="sub2" style="color:var(--muted)">Nenhum evento com escala nesta semana.</div>';
   cont.innerHTML = cards + `
     <div class="dash-grid">
       <div class="panel"><h3>Agenda de Hoje <span class="tag">${esc(diaSemanaPT(hoje))}</span></h3>${agendaHoje}
         <div style="margin-top:14px"><button class="btn secondary" style="width:100%" onclick="navegar('agenda')">Ver agenda / escala</button></div></div>
       <div class="panel"><h3>Próximos Eventos</h3>${prox}</div>
     </div>
+    <div class="panel" style="margin-top:16px"><h3>Resumo da Semana — quem vai trabalhar <span class="tag">${semRange}</span></h3>${semanaRows}
+      <div style="margin-top:12px"><button class="btn secondary" style="width:100%" onclick="navegar('agenda')">Editar escala da semana</button></div></div>
     <div class="dash-grid">
       <div class="panel"><h3>Resumo do Mês <span class="tag">${esc(mes?mes.nome:'')}</span></h3>
         <div class="mini-stats" style="margin-bottom:12px">
