@@ -356,6 +356,16 @@ async function carregarDoServidor(){
 let pushTimer=null, enviando=false, pendente=false;
 function save(){ pendente=true; setSync('salvando'); clearTimeout(pushTimer); pushTimer=setTimeout(pushAgora,600); }
 async function pushAgora(){ if(enviando) return; enviando=true; pendente=false; try { const r=await fetch('/api/data',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(db)}); setSync(r.ok?'ok':'erro'); } catch(e){ setSync('off'); } enviando=false; if(pendente) pushAgora(); }
+// Garante que uma alteração recém-feita (ex.: marcar a escala) seja salva mesmo se o app for fechado/minimizado antes dos 600ms.
+function flushSave(comKeepalive){
+  if(!pendente || enviando) return;
+  clearTimeout(pushTimer);
+  if(comKeepalive){ try{ fetch('/api/data',{method:'POST',keepalive:true,headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(db)}); pendente=false; }catch(e){} }
+  else pushAgora();
+}
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) flushSave(false); });
+window.addEventListener('pagehide',()=>flushSave(true));
+window.addEventListener('beforeunload',()=>flushSave(true));
 async function sincronizarBaixar(){ if(document.querySelector('.overlay.open')) return; if(enviando||pendente) return; let r; try { r=await fetch('/api/data',{headers:authHeaders()}); } catch(e){ setSync('off'); return; } if(!r.ok) return; const novo=normalize(await r.json()); if(JSON.stringify(novo)!==JSON.stringify(db)){ db=novo; if(!mesById(mesAtualId)) mesAtualId=db.meses[0]?db.meses[0].id:null; if(usuarioAtual){ usuarioAtual=(db.usuarios||[]).find(x=>x.id===usuarioAtual.id)||usuarioAtual; aplicarPermissoes(); } renderAtual(); } setSync('ok'); }
 function uid(p){ return (p||'id')+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36); }
 
