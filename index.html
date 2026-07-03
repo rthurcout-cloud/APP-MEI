@@ -180,6 +180,7 @@
     <div class="nav-section">Geral</div>
     <div class="nav-item" data-view="dashboard"><span class="ic">🏠</span>Dashboard</div>
     <div class="nav-item" data-view="agenda"><span class="ic">🗓️</span>Agenda / Escala</div>
+    <div class="nav-item" data-view="minhas"><span class="ic">⏱️</span>Minhas horas</div>
     <div class="nav-item" data-view="funcionarios"><span class="ic">👥</span>Funcionários</div>
     <div class="nav-item" data-view="ponto"><span class="ic">🕐</span>Ponto</div>
     <div class="nav-section">Financeiro</div>
@@ -189,7 +190,7 @@
     <div class="nav-section">Configurações</div>
     <div class="nav-item" data-view="funcoes"><span class="ic">🏷️</span>Funções</div>
     <div class="nav-item" data-view="config"><span class="ic">⚙️</span>Configurações</div>
-    <div class="user"><div class="av" id="userAv">AD</div><div><div class="nome" id="userNome">Administrador</div><div class="cargo" id="userCargo">PIBN</div></div></div>
+    <div class="user"><div class="av" id="userAv">AD</div><div style="flex:1;min-width:0"><div class="nome" id="userNome">Administrador</div><div class="cargo" id="userCargo">PIBN</div></div><span onclick="logout()" title="Sair da conta" style="cursor:pointer;color:var(--red);font-size:12px;font-weight:600;white-space:nowrap">Sair</span></div>
   </aside>
 
   <div class="content">
@@ -226,6 +227,7 @@
       <section id="page-relatorios" class="page" style="display:none"></section>
       <section id="page-funcoes" class="page" style="display:none"></section>
       <section id="page-config" class="page" style="display:none"></section>
+      <section id="page-minhas" class="page" style="display:none"></section>
     </div>
   </div>
 </div>
@@ -297,15 +299,43 @@
     </div>
   </div>
 </div>
+<!-- LOGIN -->
+<div class="overlay" id="overlayLogin" style="display:none; z-index:100">
+  <div class="modal" style="max-width:400px; margin-top:6vh">
+    <div style="text-align:center; margin-bottom:18px"><div style="font-size:42px">🏛️</div><h2 id="loginIgreja" style="margin:8px 0 2px; font-size:17px">Primeira Igreja Batista de Niterói</h2><div style="color:var(--muted); font-size:13px">Escala e Horas — entrar</div></div>
+    <div class="field"><label>Quem é você?</label><select id="loginUser"></select></div>
+    <div class="field"><label>Senha</label><input type="password" id="loginSenha" onkeydown="if(event.key==='Enter')fazerLogin()" placeholder="Sua senha"></div>
+    <div id="loginErro" style="color:var(--red); font-size:13px; margin-bottom:10px; display:none">Senha incorreta. Tente de novo.</div>
+    <button class="btn" style="width:100%" onclick="fazerLogin()">Entrar</button>
+  </div>
+</div>
+<!-- MODAL USUÁRIO (admin) -->
+<div class="overlay" id="overlayUsuario">
+  <div class="modal" style="max-width:440px">
+    <h2 id="uTitulo">Usuário</h2>
+    <input type="hidden" id="uId">
+    <div class="field"><label>Nome (aparece no login)</label><input type="text" id="uNome"></div>
+    <div class="field"><label>Senha</label><input type="text" id="uSenha"></div>
+    <div class="row">
+      <div class="field"><label>Papel</label><select id="uPapel"><option value="funcionario">Funcionário</option><option value="admin">Administrador</option></select></div>
+      <div class="field"><label>Vinculado a</label><select id="uFunc"></select></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger" id="btnExcluirUsuario" onclick="excluirUsuario()" style="margin-right:auto; display:none">Excluir</button>
+      <button class="btn secondary" onclick="closeUsuario()">Cancelar</button>
+      <button class="btn" onclick="salvarUsuario()">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <script>
-let db = { funcionarios: [], meses: [], disponibilidade: {}, funcoes: [], config: {} };
+let db = { funcionarios: [], meses: [], disponibilidade: {}, funcoes: [], config: {}, usuarios: [] };
 let mesAtualId = null, dispFuncId = null, mesRelId = null;
 let accessCode = localStorage.getItem('bh-code') || '';
 
 /* ---------- Sincronização ---------- */
 function authHeaders(extra){ return Object.assign({ 'x-access-code': accessCode }, extra||{}); }
-function normalize(d){ return { funcionarios:Array.isArray(d&&d.funcionarios)?d.funcionarios:[], meses:Array.isArray(d&&d.meses)?d.meses:[], disponibilidade:(d&&typeof d.disponibilidade==='object'&&d.disponibilidade)?d.disponibilidade:{}, funcoes:Array.isArray(d&&d.funcoes)?d.funcoes:[], config:(d&&typeof d.config==='object'&&d.config)?d.config:{} }; }
+function normalize(d){ return { funcionarios:Array.isArray(d&&d.funcionarios)?d.funcionarios:[], meses:Array.isArray(d&&d.meses)?d.meses:[], disponibilidade:(d&&typeof d.disponibilidade==='object'&&d.disponibilidade)?d.disponibilidade:{}, funcoes:Array.isArray(d&&d.funcoes)?d.funcoes:[], config:(d&&typeof d.config==='object'&&d.config)?d.config:{}, usuarios:Array.isArray(d&&d.usuarios)?d.usuarios:[] }; }
 function setSync(state){
   const map={ ok:['✓ Sincronizado','var(--green)'], salvando:['Salvando…','var(--amber)'], erro:['Erro ao salvar','var(--red)'], off:['Sem conexão','var(--muted)'], bloqueado:['Código necessário','var(--red)'], conectando:['Conectando…','var(--muted)'] };
   const [txt,cor]=map[state]||map.conectando;
@@ -326,8 +356,38 @@ async function carregarDoServidor(){
 let pushTimer=null, enviando=false, pendente=false;
 function save(){ pendente=true; setSync('salvando'); clearTimeout(pushTimer); pushTimer=setTimeout(pushAgora,600); }
 async function pushAgora(){ if(enviando) return; enviando=true; pendente=false; try { const r=await fetch('/api/data',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(db)}); setSync(r.ok?'ok':'erro'); } catch(e){ setSync('off'); } enviando=false; if(pendente) pushAgora(); }
-async function sincronizarBaixar(){ if(document.querySelector('.overlay.open')) return; if(enviando||pendente) return; let r; try { r=await fetch('/api/data',{headers:authHeaders()}); } catch(e){ setSync('off'); return; } if(!r.ok) return; const novo=normalize(await r.json()); if(JSON.stringify(novo)!==JSON.stringify(db)){ db=novo; if(!mesById(mesAtualId)) mesAtualId=db.meses[0]?db.meses[0].id:null; renderAtual(); } setSync('ok'); }
+async function sincronizarBaixar(){ if(document.querySelector('.overlay.open')) return; if(enviando||pendente) return; let r; try { r=await fetch('/api/data',{headers:authHeaders()}); } catch(e){ setSync('off'); return; } if(!r.ok) return; const novo=normalize(await r.json()); if(JSON.stringify(novo)!==JSON.stringify(db)){ db=novo; if(!mesById(mesAtualId)) mesAtualId=db.meses[0]?db.meses[0].id:null; if(usuarioAtual){ usuarioAtual=(db.usuarios||[]).find(x=>x.id===usuarioAtual.id)||usuarioAtual; aplicarPermissoes(); } renderAtual(); } setSync('ok'); }
 function uid(p){ return (p||'id')+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36); }
+
+/* ---------- Login e usuários ---------- */
+let usuarioAtual=null;
+function ehAdmin(){ return !!(usuarioAtual && usuarioAtual.papel==='admin'); }
+function seedUsuarios(){
+  if(!Array.isArray(db.usuarios)) db.usuarios=[];
+  if(db.usuarios.length) return false;
+  db.usuarios.push({id:'admin', nome:'Administrador', senha:'admin123', papel:'admin', funcId:''});
+  db.funcionarios.forEach(f=>{ const pn=((f.nome||'').trim().split(/\s+/)[0]||'user').toLowerCase(); db.usuarios.push({id:uid('u'), nome:f.nome, senha:pn, papel:'funcionario', funcId:f.id}); });
+  return true;
+}
+function popularLoginUsers(){
+  const sel=document.getElementById('loginUser'); if(!sel) return;
+  sel.innerHTML=(db.usuarios||[]).slice().sort((a,b)=>(a.papel==='admin'?-1:1)-(b.papel==='admin'?-1:1)).map(u=>`<option value="${u.id}">${esc(u.nome)}${u.papel==='admin'?' (admin)':''}</option>`).join('');
+}
+function fazerLogin(){
+  const id=document.getElementById('loginUser').value; const senha=document.getElementById('loginSenha').value;
+  const u=(db.usuarios||[]).find(x=>x.id===id);
+  if(!u || u.senha!==senha){ document.getElementById('loginErro').style.display='block'; return; }
+  usuarioAtual=u; localStorage.setItem('bh-user', u.id);
+  document.getElementById('loginErro').style.display='none'; document.getElementById('loginSenha').value='';
+  document.getElementById('overlayLogin').style.display='none';
+  aplicarPermissoes(); navegar('agenda');
+}
+function logout(){ usuarioAtual=null; localStorage.removeItem('bh-user'); popularLoginUsers(); document.getElementById('loginSenha').value=''; document.getElementById('overlayLogin').style.display='flex'; fecharMenu(); }
+function aplicarPermissoes(){
+  const admin=ehAdmin();
+  document.querySelectorAll('.nav-item').forEach(it=>{ const v=it.dataset.view; if(!v) return; let show; if(admin){ show=(v!=='minhas'); } else { show=(v==='agenda'||v==='minhas'); } it.style.display=show?'':'none'; });
+  if(usuarioAtual){ const un=document.getElementById('userNome'); if(un) un.textContent=usuarioAtual.nome; const uc=document.getElementById('userCargo'); if(uc) uc.textContent=admin?'Administrador':'Funcionário'; const ua=document.getElementById('userAv'); if(ua) ua.textContent=iniciais(usuarioAtual.nome); }
+}
 
 /* ---------- Helpers ---------- */
 function esc(s){ return (s==null?'':(''+s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -352,10 +412,12 @@ function mesAnoDe(mes){ if(mes.dias&&mes.dias[0]&&mes.dias[0].data){ const p=mes
 function todosDias(){ const out=[]; db.meses.forEach(m=>(m.dias||[]).forEach(d=>out.push({mes:m,dia:d}))); return out; }
 
 /* ---------- Navegação ---------- */
-const PAGES=['dashboard','agenda','funcionarios','ponto','confirmacoes','banco','financeiro','relatorios','funcoes','config'];
-const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Dias que cada funcionário pode trabalhar.'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Funções da equipe (Som, Transmissão...).'], config:['Configurações','Ajustes do sistema.'] };
+const PAGES=['dashboard','agenda','funcionarios','ponto','confirmacoes','banco','financeiro','relatorios','funcoes','config','minhas'];
+const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Dias que cada funcionário pode trabalhar.'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Funções da equipe (Som, Transmissão...).'], config:['Configurações','Ajustes do sistema.'], minhas:['Minhas horas','Suas horas e valor a receber.'] };
 let viewAtual='dashboard';
 function navegar(v){
+  if(usuarioAtual && !ehAdmin() && !['agenda','minhas'].includes(v)) v='agenda';
+  if(!TITULOS[v]) v='agenda';
   viewAtual=v;
   PAGES.forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display=(p===v)?'':'none'; });
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
@@ -376,6 +438,7 @@ function renderAtual(){
   else if(viewAtual==='ponto') renderPonto();
   else if(viewAtual==='relatorios') renderRelatorios();
   else if(viewAtual==='config') renderConfig();
+  else if(viewAtual==='minhas') renderMinhasHoras();
   else renderEmConstrucao(viewAtual);
 }
 document.querySelectorAll('.nav-item').forEach(t=>t.onclick=()=>navegar(t.dataset.view));
@@ -547,9 +610,14 @@ function renderDisp(boxId){
 function montarBlocoEscala(d){
   const arr=(d.escala||[]);
   const nConf=arr.filter(a=>a.confirmado).length;
-  const botoes=db.funcionarios.map(f=>{ const a=arr.find(x=>x.funcId===f.id); const on=!!a; const fc=(a&&a.funcaoId)?db.funcoes.find(x=>x.id===a.funcaoId):null; return `<button class="esc-btn ${on?'on':''}" onclick="toggleEscalaFunc('${d.id}','${f.id}')"><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${on?' ✓':''}</button>`; }).join('');
+  const admin=ehAdmin(); const meu=usuarioAtual?usuarioAtual.funcId:null;
+  const botoes=db.funcionarios.map(f=>{ const a=arr.find(x=>x.funcId===f.id); const on=!!a; const fc=(a&&a.funcaoId)?db.funcoes.find(x=>x.id===a.funcaoId):null;
+    const pode = admin || f.id===meu;
+    const attr = pode? `onclick="toggleEscalaFunc('${d.id}','${f.id}')"` : 'style="opacity:.55;cursor:default"';
+    return `<button class="esc-btn ${on?'on':''}" ${attr}><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${on?' ✓':''}</button>`; }).join('');
   const conftag = arr.length? `<span class="badge ${nConf===arr.length?'green':'amber'}" style="font-size:9px;padding:1px 6px">${nConf}/${arr.length}</span>` : '';
-  return `<div class="cal-ev"><div class="cal-ev-nome">${esc(d.evento)||'Evento'} ${conftag}</div><div class="esc-botoes">${botoes}</div><span class="mini-link" onclick="openEscala('${d.id}')">⚙ função</span></div>`;
+  const link = admin? `<span class="mini-link" onclick="openEscala('${d.id}')">⚙ função</span>` : '';
+  return `<div class="cal-ev"><div class="cal-ev-nome">${esc(d.evento)||'Evento'} ${conftag}</div><div class="esc-botoes">${botoes}</div>${link}</div>`;
 }
 function renderEscala(boxId){
   const box=document.getElementById(boxId); const mes=mesById(mesAtualId);
@@ -582,6 +650,7 @@ function openEscala(diaId){
   document.getElementById('overlayEscala').classList.add('open');
 }
 function toggleEscalaFunc(diaId, fid){
+  if(usuarioAtual && !ehAdmin() && fid!==usuarioAtual.funcId) return;
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
   if(!d.escala) d.escala=[];
   const i=d.escala.findIndex(a=>a.funcId===fid);
@@ -752,7 +821,13 @@ function aplicarIdentidade(){
 }
 function renderConfig(){
   const el=document.getElementById('page-config'); const c=db.config||{};
+  const usuariosHtml=(db.usuarios||[]).map(u=>{ const f=u.funcId?funcById(u.funcId):null; return `<div class="linha" style="align-items:center"><span><b style="color:var(--text)">${esc(u.nome)}</b> <span class="badge ${u.papel==='admin'?'':'green'}" style="font-size:10px">${u.papel==='admin'?'admin':(f?esc(f.nome):'sem vínculo')}</span></span><button class="btn secondary small" onclick="openUsuario('${u.id}')">Editar</button></div>`; }).join('');
   el.innerHTML=`
+    <div class="card"><h3 style="margin:0 0 14px;font-size:16px">👤 Usuários e senhas</h3>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 10px">Cada pessoa entra com o próprio nome e senha. Admin vê tudo; funcionário marca a própria escala e vê as próprias horas.</p>
+      ${usuariosHtml}
+      <div style="margin-top:12px"><button class="btn" onclick="openUsuario()">+ Novo usuário</button></div>
+    </div>
     <div class="card"><h3 style="margin:0 0 14px;font-size:16px">🏛️ Identidade</h3>
       <div class="field"><label>Nome da igreja</label><input type="text" id="cfgIgreja" value="${esc(c.igreja||'Primeira Igreja Batista de Niterói')}"></div>
       <div class="field"><label>Nome do administrador</label><input type="text" id="cfgAdmin" value="${esc(c.admin||'Administrador')}"></div>
@@ -866,6 +941,48 @@ async function sincronizarPlanilha(){
   }catch(e){ setMsg('Erro: '+esc(e.message||e),'var(--red)'); }
 }
 
+/* ---------- Gerenciar usuários (admin) ---------- */
+function openUsuario(id){
+  const u=id?(db.usuarios||[]).find(x=>x.id===id):null;
+  document.getElementById('uTitulo').textContent=u?'Editar usuário':'Novo usuário';
+  document.getElementById('uId').value=u?u.id:'';
+  document.getElementById('uNome').value=u?u.nome:'';
+  document.getElementById('uSenha').value=u?u.senha:'';
+  document.getElementById('uPapel').value=u?u.papel:'funcionario';
+  document.getElementById('uFunc').innerHTML='<option value="">— nenhum —</option>'+db.funcionarios.map(f=>`<option value="${f.id}" ${u&&u.funcId===f.id?'selected':''}>${esc(f.nome)}</option>`).join('');
+  document.getElementById('btnExcluirUsuario').style.display=(u && u.id!=='admin')?'':'none';
+  document.getElementById('overlayUsuario').classList.add('open');
+}
+function closeUsuario(){ document.getElementById('overlayUsuario').classList.remove('open'); }
+document.getElementById('overlayUsuario').addEventListener('click',e=>{ if(e.target.id==='overlayUsuario') closeUsuario(); });
+function salvarUsuario(){
+  const nome=document.getElementById('uNome').value.trim(); if(!nome){ alert('Digite o nome.'); return; }
+  const senha=document.getElementById('uSenha').value; if(!senha){ alert('Defina uma senha.'); return; }
+  const papel=document.getElementById('uPapel').value; const funcId=document.getElementById('uFunc').value;
+  const id=document.getElementById('uId').value;
+  if(id){ const u=db.usuarios.find(x=>x.id===id); u.nome=nome; u.senha=senha; u.papel=papel; u.funcId=funcId; if(usuarioAtual&&usuarioAtual.id===id){ usuarioAtual=u; aplicarPermissoes(); } }
+  else { db.usuarios.push({id:uid('u'), nome, senha, papel, funcId}); }
+  save(); closeUsuario(); renderConfig();
+}
+function excluirUsuario(){ const id=document.getElementById('uId').value; if(id==='admin'){ alert('Não dá pra excluir o Administrador principal.'); return; } if(!confirm('Excluir este usuário?')) return; db.usuarios=db.usuarios.filter(x=>x.id!==id); save(); closeUsuario(); renderConfig(); }
+
+/* ---------- Minhas horas (funcionário) ---------- */
+function renderMinhasHoras(){
+  const el=document.getElementById('page-minhas');
+  const fid=usuarioAtual?usuarioAtual.funcId:null; const f=fid?funcById(fid):null;
+  if(!f){ el.innerHTML='<div class="empty"><div class="big">⏱️</div>Seu login não está vinculado a um funcionário.<br>Peça ao administrador para vincular.</div>'; return; }
+  let hAno=0; const linhas=db.meses.map(m=>{ const h=horasFuncMes(m,f.id); hAno+=h; const v=h*(+f.valorHora||0); return `<tr><td class="dia">${esc(m.nome)}</td><td>${fmtHoras(h)}</td><td class="tot">${money(v)}</td></tr>`; }).join('');
+  const totV=hAno*(+f.valorHora||0);
+  el.innerHTML=`<div class="stats">
+      <div class="stat"><div class="num"><span class="avatar" style="display:inline-flex;width:30px;height:30px;font-size:13px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span> ${esc(f.nome)}</div><div class="lbl">Você</div></div>
+      <div class="stat"><div class="num" style="color:var(--accent)">${fmtHoras(hAno)}</div><div class="lbl">Horas no ano</div></div>
+      <div class="stat"><div class="num" style="color:var(--green)">${money(totV)}</div><div class="lbl">A receber no ano</div></div>
+    </div>
+    <div class="section-label">Mês a mês</div>
+    <div class="tbl-wrap"><table class="planilha"><thead><tr><th style="text-align:left">Mês</th><th>Horas</th><th>A receber</th></tr></thead><tbody>${linhas}</tbody></table></div>
+    <div class="hint">Valor/hora: ${money(f.valorHora)}. Calculado a partir das horas lançadas (entrada/saída).</div>`;
+}
+
 /* ---------- Em construção ---------- */
 function renderEmConstrucao(v){
   const el=document.getElementById('page-'+v); const t=TITULOS[v];
@@ -877,10 +994,16 @@ function renderEmConstrucao(v){
 (async function boot(){
   document.getElementById('dataHoje').textContent=dataExtenso();
   const ok=await carregarDoServidor();
+  if(seedUsuarios()) save();
   if(db.meses.length){ const hoje=hojeISO(); const m=db.meses.find(x=>{ const {ano,mes}=mesAnoDe(x); return `${ano}-${String(mes).padStart(2,'0')}`===hoje.slice(0,7); }); mesAtualId=m?m.id:db.meses[0].id; }
   if(db.funcionarios.length) dispFuncId=db.funcionarios[0].id;
   aplicarIdentidade();
-  navegar('agenda');
+  const lg=document.getElementById('loginIgreja'); if(lg) lg.textContent=(db.config&&db.config.igreja)||'Primeira Igreja Batista de Niterói';
+  popularLoginUsers();
+  const savedU=localStorage.getItem('bh-user');
+  const u=savedU?(db.usuarios||[]).find(x=>x.id===savedU):null;
+  if(u){ usuarioAtual=u; document.getElementById('overlayLogin').style.display='none'; aplicarPermissoes(); navegar('agenda'); }
+  else { document.getElementById('overlayLogin').style.display='flex'; }
   if(ok) setInterval(sincronizarBaixar,8000);
 })();
 </script>
