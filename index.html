@@ -880,7 +880,7 @@ function renderEmConstrucao(v){
   if(db.meses.length){ const hoje=hojeISO(); const m=db.meses.find(x=>{ const {ano,mes}=mesAnoDe(x); return `${ano}-${String(mes).padStart(2,'0')}`===hoje.slice(0,7); }); mesAtualId=m?m.id:db.meses[0].id; }
   if(db.funcionarios.length) dispFuncId=db.funcionarios[0].id;
   aplicarIdentidade();
-  navegar('dashboard');
+  navegar('agenda');
   if(ok) setInterval(sincronizarBaixar,8000);
 })();
 </script>
