@@ -413,7 +413,7 @@ function todosDias(){ const out=[]; db.meses.forEach(m=>(m.dias||[]).forEach(d=>
 
 /* ---------- Navegação ---------- */
 const PAGES=['dashboard','agenda','funcionarios','ponto','confirmacoes','banco','financeiro','relatorios','funcoes','config','minhas'];
-const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Dias que cada funcionário pode trabalhar.'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Funções da equipe (Som, Transmissão...).'], config:['Configurações','Ajustes do sistema.'], minhas:['Minhas horas','Suas horas e valor a receber.'] };
+const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Dias que cada funcionário pode trabalhar.'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Defina o cargo de cada funcionário.'], config:['Configurações','Ajustes do sistema.'], minhas:['Minhas horas','Suas horas e valor a receber.'] };
 let viewAtual='dashboard';
 function navegar(v){
   if(usuarioAtual && !ehAdmin() && !['agenda','minhas','ponto'].includes(v)) v='agenda';
@@ -655,7 +655,7 @@ function toggleEscalaFunc(diaId, fid){
   if(!d.escala) d.escala=[];
   const i=d.escala.findIndex(a=>a.funcId===fid);
   if(i>=0) d.escala.splice(i,1);
-  else d.escala.push({funcId:fid, funcaoId:'', confirmado:false});
+  else d.escala.push({funcId:fid, funcaoId:((funcById(fid)||{}).cargoId||''), confirmado:false});
   save(); renderAgenda();
 }
 function closeEscala(){ document.getElementById('overlayEscala').classList.remove('open'); }
@@ -713,14 +713,25 @@ function renderFinanceiro(){
 
 /* ---------- Funções (papéis da equipe) ---------- */
 const CORES_FUNC=['#4f7cff','#3ecf8e','#f5b942','#c084fc','#ff6b6b','#22d3ee','#fb7185','#a3e635'];
+const CARGOS_PADRAO=[{nome:'Técnico de Áudio Cabine',cor:'#4f7cff'},{nome:'Técnico de Áudio PA',cor:'#3ecf8e'},{nome:'Técnico em Iluminação Cênica',cor:'#f5b942'},{nome:'Cabine',cor:'#c084fc'}];
+function seedCargos(){ if(!Array.isArray(db.funcoes)) db.funcoes=[]; if(db.funcoes.length) return false; CARGOS_PADRAO.forEach(c=>db.funcoes.push({id:uid('fc'),nome:c.nome,cor:c.cor})); return true; }
+function setCargo(funcId, cargoId){ const f=funcById(funcId); if(!f) return; f.cargoId=cargoId; save(); renderFuncoes(); }
 function renderFuncoes(){
   const el=document.getElementById('page-funcoes');
-  const cab=`<div class="toolbar"><button class="btn" onclick="openFuncao()">+ Nova função</button></div>`;
-  if(!db.funcoes.length){
-    el.innerHTML=cab+`<div class="empty"><div class="big">🏷️</div>Nenhuma função cadastrada.<br>Cadastre os papéis da equipe (Som, Transmissão, Projeção...).<br><br><button class="btn" onclick="adicionarFuncoesPadrao()">Adicionar funções comuns</button></div>`;
-    return;
-  }
-  el.innerHTML=cab+'<div class="pay-grid">'+db.funcoes.map(fc=>`<div class="pay-card"><div class="nome"><span class="avatar" style="background:${fc.cor||'#4f7cff'}">${esc(iniciais(fc.nome))}</span>${esc(fc.nome)}</div><div style="margin-top:12px"><button class="btn secondary small" onclick="openFuncao('${fc.id}')">Editar</button></div></div>`).join('')+'</div>'+`<div class="hint">💡 Em breve, na <b>Escala</b>, você vai atribuir essas funções às pessoas em cada evento.</div>`;
+  const cargoOpts=(sel)=>'<option value="">— sem cargo —</option>'+db.funcoes.map(c=>`<option value="${c.id}" ${sel===c.id?'selected':''}>${esc(c.nome)}</option>`).join('');
+  const cards=db.funcionarios.map(f=>{
+    const c=f.cargoId?db.funcoes.find(x=>x.id===f.cargoId):null;
+    return `<div class="pay-card"><div class="nome"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div>
+      <div class="field" style="margin:12px 0 0"><label>Cargo</label><select onchange="setCargo('${f.id}', this.value)">${cargoOpts(f.cargoId||'')}</select></div>
+      ${c?`<div class="linha" style="margin-top:8px"><span>Cargo atual</span><b style="color:${c.cor}">${esc(c.nome)}</b></div>`:''}
+    </div>`;
+  }).join('');
+  const cargosLista = db.funcoes.length? db.funcoes.map(c=>`<span class="chip" onclick="openFuncao('${c.id}')" style="cursor:pointer"><span class="dot" style="background:${c.cor}"></span>${esc(c.nome)}</span>`).join('') : '<span class="hint" style="margin:0">Nenhum cargo. Clique em "+ Nova função".</span>';
+  el.innerHTML=`<div class="toolbar"><button class="btn" onclick="openFuncao()">+ Nova função</button></div>
+    <div class="section-label">Cargo de cada funcionário</div>
+    <div class="pay-grid">${cards}</div>
+    <div class="section-label" style="margin-top:22px">Cargos disponíveis (toque para editar)</div>
+    <div class="chips">${cargosLista}</div>`;
 }
 function adicionarFuncoesPadrao(){
   ['Som','Transmissão','Projeção','Câmera','Recepção'].forEach((n,i)=>{ if(!db.funcoes.some(x=>(x.nome||'').toLowerCase()===n.toLowerCase())) db.funcoes.push({id:uid('fc'),nome:n,cor:CORES_FUNC[i%CORES_FUNC.length]}); });
@@ -995,7 +1006,7 @@ function renderEmConstrucao(v){
 (async function boot(){
   document.getElementById('dataHoje').textContent=dataExtenso();
   const ok=await carregarDoServidor();
-  if(seedUsuarios()) save();
+  const s1=seedUsuarios(); const s2=seedCargos(); if(s1||s2) save();
   if(db.meses.length){ const hoje=hojeISO(); const m=db.meses.find(x=>{ const {ano,mes}=mesAnoDe(x); return `${ano}-${String(mes).padStart(2,'0')}`===hoje.slice(0,7); }); mesAtualId=m?m.id:db.meses[0].id; }
   if(db.funcionarios.length) dispFuncId=db.funcionarios[0].id;
   aplicarIdentidade();
