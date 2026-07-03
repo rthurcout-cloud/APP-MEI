@@ -216,7 +216,7 @@
         <div id="lista-funcionarios"></div>
       </section>
       <section id="page-banco" class="page" style="display:none">
-        <div class="toolbar"><select id="mesBanco" onchange="setMes(this.value)"></select><button class="btn" onclick="openDia()">+ Novo dia</button></div>
+        <div class="toolbar"><select id="mesBanco" onchange="setMes(this.value)"></select></div>
         <div id="planilha-conteudo"></div>
       </section>
       <section id="page-financeiro" class="page" style="display:none">
@@ -523,11 +523,11 @@ function renderRegistro(){
   if(!mes){ cont.innerHTML='<div class="empty"><div class="big">📅</div>Nenhum mês cadastrado.</div>'; return; }
   const funcs=db.funcionarios; const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
   const thFunc=funcs.map(f=>`<th>${esc(f.nome)}</th>`).join('');
-  if(!dias.length){ cont.innerHTML='<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.<br>Clique em <b>+ Novo dia</b>.</div>'; return; }
+  if(!dias.length){ cont.innerHTML='<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.<br>Os dias chegam pela sincronização da planilha.</div>'; return; }
   const linhas=dias.map(d=>{
-    const cells=funcs.map(f=>{ const h=+regDe(d,f.id).horas||0; return `<td><input class="h" type="number" step="0.25" min="0" value="${h?Math.round(h*100)/100:''}" placeholder="0" onchange="setHora('${d.id}','${f.id}',this.value)"></td>`; }).join('');
+    const cells=funcs.map(f=>{ const h=+regDe(d,f.id).horas||0; return `<td style="text-align:center;font-weight:600;color:${h?'var(--text)':'var(--muted)'}">${h?fmtHoras(h):'—'}</td>`; }).join('');
     const p=(d.data||'--').split('-');
-    return `<tr><td class="dia" onclick="openDia('${d.id}')"><b>${p[2]||'?'}/${p[1]||'?'}</b> <small>${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</small></td><td class="ev" onclick="openDia('${d.id}')">${esc(d.evento)||'—'}</td>${cells}<td class="tot" id="tot-${d.id}">${fmtHoras(horasDia(d))}</td></tr>`;
+    return `<tr><td class="dia"><b>${p[2]||'?'}/${p[1]||'?'}</b> <small>${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</small></td><td class="ev">${esc(d.evento)||'—'}</td>${cells}<td class="tot" id="tot-${d.id}">${fmtHoras(horasDia(d))}</td></tr>`;
   }).join('');
   const totFunc=funcs.map(f=>`<td id="ft-${f.id}">${fmtHoras(horasFuncMes(mes,f.id))}</td>`).join('');
   const recFunc=funcs.map(f=>`<td id="fr-${f.id}">${money(horasFuncMes(mes,f.id)*(+f.valorHora||0))}</td>`).join('');
@@ -537,7 +537,7 @@ function renderRegistro(){
     <tbody>${linhas}</tbody>
     <tfoot><tr><td colspan="2" style="text-align:left">Total de horas</td>${totFunc}<td class="tot" id="ftg">${fmtHoras(totMesHoras)}</td></tr>
     <tr class="receber"><td colspan="2" style="text-align:left">Valor a receber</td>${recFunc}<td id="frg">${money(totalPagarMes(mes))}</td></tr></tfoot>
-  </table></div><div class="hint">Digite as horas direto na tabela. Toque na <b>data</b> ou no <b>evento</b> pra editar entrada/saída.</div>`;
+  </table></div><div class="hint">📖 Somente leitura. As horas vêm do <b>Ponto</b> e da planilha (entrada/saída). Para lançar ou corrigir horários, use a tela <b>Ponto</b>.</div>`;
 }
 function setHora(diaId, fid, val){
   const mes=mesById(mesAtualId); if(!mes) return; const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
