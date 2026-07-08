@@ -895,6 +895,10 @@ function renderConfig(){
       </div>
       <div id="syncMsg" style="margin-top:12px;font-size:14px"></div>
     </div>
+    <div class="card"><h3 style="margin:0 0 8px;font-size:16px">📥 Baixar planilha (Excel)</h3>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 12px">Baixa um arquivo <b>Excel (.xlsx)</b> com todos os dados — <b>uma aba por mês</b>, com dias, eventos, entrada/saída, horas, total do dia e valor a receber. Assim você tem o controle também fora do app (abre no Excel ou no Google Planilhas).</p>
+      <button class="btn" onclick="baixarExcel()">📥 Baixar planilha (Excel)</button>
+    </div>
     <div class="card"><h3 style="margin:0 0 8px;font-size:16px">ℹ️ Sobre</h3>
       <p style="color:var(--muted);font-size:13px;margin:0">Sistema de Escala e Horas — PIBN. Dados compartilhados e sincronizados entre dispositivos.</p>
     </div>`;
@@ -905,6 +909,49 @@ function salvarConfig(){
 }
 function exportBackup(){ const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='backup-banco-horas-pibn.json'; a.click(); }
 function importBackup(ev){ const f=ev.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.funcionarios||!d.meses) throw 0; if(!confirm('Isto vai SUBSTITUIR todos os dados atuais (de todos) pelos do arquivo. Continuar?')) return; db=normalize(d); save(); if(db.meses.length) mesAtualId=db.meses[0].id; aplicarIdentidade(); renderAtual(); alert('Backup restaurado!'); }catch(e){ alert('Arquivo inválido.'); } }; r.readAsText(f); ev.target.value=''; }
+function baixarExcel(){
+  if(!window.XLSX){ alert('A biblioteca de planilha ainda está carregando. Aguarde 1-2s e tente de novo.'); return; }
+  if(!db.meses||!db.meses.length){ alert('Não há meses cadastrados para exportar.'); return; }
+  const wb = XLSX.utils.book_new();
+  db.meses.forEach(mes=>{
+    const aoa = [];
+    aoa[0] = ['AGENDA MENSAL — REGISTRO DIÁRIO DE HORAS — '+(mes.nome||'')];
+    aoa[4] = ['Funcionário','Valor/hora'];
+    db.funcionarios.forEach((f,i)=>{ aoa[5+i] = [f.nome, (+f.valorHora||0)]; });
+    const header = ['Data','Dia','Evento'];
+    db.funcionarios.forEach(f=> header.push(f.nome));
+    header.push('Total');
+    db.funcionarios.forEach(f=>{ header.push(f.nome+' - Entrada'); header.push(f.nome+' - Saída'); });
+    header.push('Observações');
+    aoa[11] = header;
+    const dias = (mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+    let ri = 12;
+    dias.forEach(d=>{
+      const row = [];
+      const p = (d.data||'').split('-');
+      row[0] = (p.length===3) ? (p[2]+'/'+p[1]+'/'+p[0]) : (d.data||'');
+      row[1] = (d.diaSemana||diaSemanaPT(d.data)||'');
+      row[2] = d.evento||'';
+      db.funcionarios.forEach((f,i)=>{ const h=+regDe(d,f.id).horas||0; row[3+i] = h?fmtHoras(h):''; });
+      const tot = db.funcionarios.reduce((s,f)=>s+(+regDe(d,f.id).horas||0),0);
+      row[7] = tot?fmtHoras(tot):'';
+      db.funcionarios.forEach((f,i)=>{ const r=regDe(d,f.id); row[8+i*2]=r.entrada||''; row[8+i*2+1]=r.saida||''; });
+      row[16] = d.obs||'';
+      aoa[ri++] = row;
+    });
+    ri += 1;
+    const lhHoras = ['TOTAL DE HORAS','','']; db.funcionarios.forEach(f=> lhHoras.push(fmtHoras(horasFuncMes(mes,f.id)))); lhHoras.push('');
+    const lhPagar = ['VALOR A RECEBER','','']; db.funcionarios.forEach(f=> lhPagar.push(money(horasFuncMes(mes,f.id)*(+f.valorHora||0))));
+    aoa[ri++] = lhHoras; aoa[ri++] = lhPagar;
+    for(let k=0;k<aoa.length;k++){ if(!aoa[k]) aoa[k]=[]; }
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:11},{wch:9},{wch:22},{wch:8},{wch:8},{wch:8},{wch:8},{wch:8},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:26}];
+    const nomeAba = ((mes.nome||'Mes').replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31)) || 'Mes';
+    XLSX.utils.book_append_sheet(wb, ws, nomeAba);
+  });
+  const hoje = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, 'Banco de Horas PIBN - '+hoje+'.xlsx');
+}
 async function trocarCodigo(){ accessCode=''; localStorage.removeItem('bh-code'); const ok=await carregarDoServidor(); if(ok){ if(!mesById(mesAtualId)&&db.meses.length) mesAtualId=db.meses[0].id; aplicarIdentidade(); renderAtual(); } }
 
 /* ---------- Sincronização com a planilha do Google ---------- */
