@@ -294,6 +294,20 @@
     </div>
   </div>
 </div>
+<!-- MODAL OBSERVAÇÃO -->
+<div class="overlay" id="overlayObs">
+  <div class="modal" style="max-width:480px">
+    <h2>📝 Observação — <span id="obsTitulo" style="color:var(--accent)"></span></h2>
+    <input type="hidden" id="obsDiaId">
+    <div class="field"><label>Descreva a atividade feita neste dia (aparece no relatório em PDF)</label>
+      <textarea id="obsTexto" rows="5" placeholder="Ex.: Gravei o culto, operei a mesa de som, editei o vídeo da transmissão..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeObs()">Cancelar</button>
+      <button class="btn" onclick="salvarObs()">Salvar observação</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL ESCALA -->
 <div class="overlay" id="overlayEscala">
   <div class="modal">
@@ -796,7 +810,9 @@ function renderPonto(){
       return `<div class="pt-row"><div class="nm"><span class="avatar" style="width:20px;height:20px;font-size:10px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'} bd">${bateu?fmtHoras(r.horas):'falta'}</span></div>`; }).filter(Boolean).join('');
     const vazio=`<div class="pt-row" style="color:var(--muted);justify-content:center;padding:10px 0">${(!ehAdmin()&&usuarioAtual)?'Você não está escalado neste dia':'Ninguém escalado neste dia'}</div>`;
     const p=(d.data||'--').split('-');
-    return `<div class="card pt-card"><div class="pt-head"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:0">${p[2]||'?'}/${p[1]||'?'} · ${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="pt-row pt-cab"><span>Equipe</span><span>Ent</span><span>Saí</span><span>Hrs</span></div>${rows||vazio}</div>`;
+    const temObs=d.obs&&d.obs.trim();
+    const obsBtn=`<div style="margin-top:8px"><button class="btn secondary" style="width:100%;font-size:12px;padding:7px" onclick="openObs('${d.id}')">📝 Observação${temObs?' ✓':''}</button>${temObs?`<div class="hint" style="margin:5px 0 0;font-size:11px;white-space:normal;line-height:1.35">🗒️ ${esc(d.obs.trim())}</div>`:''}</div>`;
+    return `<div class="card pt-card"><div class="pt-head"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:0">${p[2]||'?'}/${p[1]||'?'} · ${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="pt-row pt-cab"><span>Equipe</span><span>Ent</span><span>Saí</span><span>Hrs</span></div>${rows||vazio}${obsBtn}</div>`;
   }).join('');
   el.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div><div class="hint" style="margin-bottom:12px">Aparecem só as pessoas <b>escaladas</b> de cada dia (definidas na Escala). Preencha <b>entrada</b> e <b>saída</b> — as horas são calculadas e vão para o Banco de Horas. Quando faltam horários, marca <b>"falta"</b>.</div>`+(dias.length?('<div class="ponto-grid">'+cards+'</div>'):'<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.</div>');
 }
@@ -808,6 +824,22 @@ function setPonto(diaId, fid, campo, val){
   const h=horasEntre(d.reg[fid].entrada,d.reg[fid].saida); if(h!=null) d.reg[fid].horas=h;
   save(); renderPonto();
 }
+function openObs(diaId){
+  const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
+  document.getElementById('obsDiaId').value=d.id;
+  const p=(d.data||'--').split('-');
+  document.getElementById('obsTitulo').textContent=(d.evento||'Evento')+' · '+(p[2]||'?')+'/'+(p[1]||'?');
+  document.getElementById('obsTexto').value=d.obs||'';
+  document.getElementById('overlayObs').classList.add('open');
+  setTimeout(()=>document.getElementById('obsTexto').focus(),60);
+}
+function closeObs(){ document.getElementById('overlayObs').classList.remove('open'); }
+function salvarObs(){
+  const id=document.getElementById('obsDiaId').value; const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return;
+  d.obs=document.getElementById('obsTexto').value.trim();
+  save(); closeObs(); renderPonto();
+}
+document.getElementById('overlayObs').addEventListener('click',e=>{ if(e.target.id==='overlayObs') closeObs(); });
 
 /* ---------- Relatórios (PDF por pessoa) ---------- */
 function renderRelatorios(){
@@ -997,7 +1029,7 @@ function mesclarPlanilha(p){
       const regApp={};
       p.funcs.forEach(pf=>{ const f=db.funcionarios.find(x=>(x.nome||'').toLowerCase()===pf.nome.toLowerCase()); if(!f) return; const r=pd.reg[pf.idx]||{horas:0,entrada:'',saida:''}; regApp[f.id]={ entrada:r.entrada||'', saida:r.saida||'', horas:r.horas||0 }; });
       const dia=mes.dias.find(d=>d.data===pd.data && (d.evento||'').trim().toLowerCase()===(pd.evento||'').trim().toLowerCase());
-      if(dia){ dia.diaSemana=pd.diaSemana; dia.evento=pd.evento; dia.obs=pd.obs; dia.reg=Object.assign(dia.reg||{}, regApp); atualizados++; }
+      if(dia){ dia.diaSemana=pd.diaSemana; dia.evento=pd.evento; if(pd.obs) dia.obs=pd.obs; dia.reg=Object.assign(dia.reg||{}, regApp); atualizados++; }
       else { mes.dias.push({ id:uid('d'), data:pd.data, diaSemana:pd.diaSemana, evento:pd.evento, obs:pd.obs, reg:regApp }); novos++; }
     });
   });

@@ -53,7 +53,7 @@ function mesclar(db, p) {
       const regApp = {};
       p.funcs.forEach(pf => { const f = byNome[pf.nome.toLowerCase()]; if (!f) return; const r = pd.reg[pf.idx] || { entrada: '', saida: '', horas: 0 }; regApp[f.id] = { entrada: r.entrada || '', saida: r.saida || '', horas: r.horas || 0 }; });
       const dia = mes.dias.find(d => d.data === pd.data && (d.evento || '').trim().toLowerCase() === (pd.evento || '').trim().toLowerCase());
-      if (dia) { dia.diaSemana = pd.diaSemana; dia.evento = pd.evento; dia.obs = pd.obs; dia.reg = Object.assign(dia.reg || {}, regApp); at++; }
+      if (dia) { dia.diaSemana = pd.diaSemana; dia.evento = pd.evento; if (pd.obs) dia.obs = pd.obs; dia.reg = Object.assign(dia.reg || {}, regApp); at++; }
       else { mes.dias.push({ id: 'd' + Date.now() + (seq++), data: pd.data, diaSemana: pd.diaSemana, evento: pd.evento, obs: pd.obs, reg: regApp }); nv++; }
     });
   });
