@@ -853,15 +853,15 @@ function renderRelatorios(){
       <div class="linha"><span>Dias trabalhados</span><b style="color:var(--text)">${dt}</b></div>
       <div class="linha"><span>Horas em ${esc(mes.nome)}</span><b style="color:var(--text)">${fmtHoras(h)}</b></div>
       <div class="linha" style="margin-top:6px"><span>A receber</span><b class="total">${money(h*(+f.valorHora||0))}</b></div>
-      <div style="margin-top:12px"><button class="btn" onclick="gerarRelatorio('${mes.id}','${f.id}')">📄 Gerar PDF</button></div></div>`;
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="gerarRelatorio('${mes.id}','${f.id}')">📄 Gerar PDF</button><button class="btn secondary" onclick="compartilharRelatorio('${mes.id}','${f.id}')">📤 Compartilhar</button></div></div>`;
   }).join('');
   el.innerHTML=`<div class="toolbar"><select onchange="mesRelId=this.value; renderRelatorios()">${mesOpts}</select><button class="btn secondary" onclick="gerarTodos()">📄 PDF de todos</button></div>
     <div class="hint" style="margin-bottom:14px">Gera um PDF por pessoa com os dias trabalhados, horários, observações, total de horas e valor a receber. O arquivo sai como <b>"Mês de Junho - Nathan.pdf"</b>.</div>
     <div class="pay-grid">${cards}</div>`;
 }
-function gerarRelatorio(mesId, funcId){
-  if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Aguarde 1-2 segundos e tente de novo.'); return; }
-  const mes=mesById(mesId), f=funcById(funcId); if(!mes||!f) return;
+function montarRelatorio(mesId, funcId){
+  if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Aguarde 1-2 segundos e tente de novo.'); return null; }
+  const mes=mesById(mesId), f=funcById(funcId); if(!mes||!f) return null;
   const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).filter(d=>{ const r=regDe(d,funcId); return (+r.horas||0)>0||r.entrada||r.saida; });
   const { jsPDF }=window.jspdf; const doc=new jsPDF();
   doc.setFontSize(15); doc.text(((db.config&&db.config.igreja)||'Primeira Igreja Batista de Niterói'), 14, 18);
@@ -877,7 +877,21 @@ function gerarRelatorio(mesId, funcId){
   doc.setTextColor(20,120,70); doc.setFontSize(13); doc.text(`Total a receber: ${money(valor)}`, 14, y+15);
   doc.setTextColor(150); doc.setFontSize(8.5); doc.text(`Gerado em ${dataExtenso()}`, 14, 287);
   const nomeArq=`Mês de ${(mes.nome||'').replace(/\s*\d{4}/,'').trim()} - ${f.nome}.pdf`;
-  doc.save(nomeArq);
+  return { doc, nomeArq, titulo:`${f.nome} — ${mes.nome}` };
+}
+function gerarRelatorio(mesId, funcId){ const r=montarRelatorio(mesId, funcId); if(r) r.doc.save(r.nomeArq); }
+async function compartilharRelatorio(mesId, funcId){
+  const r=montarRelatorio(mesId, funcId); if(!r) return;
+  try{
+    const blob=r.doc.output('blob');
+    const file=new File([blob], r.nomeArq, {type:'application/pdf'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title:r.nomeArq, text:'Relatório de horas — '+r.titulo });
+    } else {
+      r.doc.save(r.nomeArq);
+      alert('Este navegador não permite compartilhar o arquivo direto (mais comum no computador). O PDF foi baixado — é só anexar no email ou WhatsApp. 📎\n\nNo celular, o botão abre a tela de compartilhar já com o arquivo.');
+    }
+  }catch(e){ /* usuário cancelou o compartilhamento */ }
 }
 function gerarTodos(){ const mes=mesById(mesRelId); if(!mes) return; if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Tente de novo.'); return; } db.funcionarios.forEach((f,i)=>setTimeout(()=>gerarRelatorio(mes.id,f.id), i*500)); }
 
