@@ -374,12 +374,19 @@ async function carregarDoServidor(){
     if(!r.ok){ setSync('erro'); return false; }
     db=normalize(await r.json());
     if(!db.funcionarios.length && !db.meses.length){ try { const seed=await (await fetch('dados-iniciais.json')).json(); db=normalize(seed); await pushAgora(); } catch(e){} }
+    try{ localStorage.setItem('bh-db', JSON.stringify(db)); }catch(e){}
     setSync('ok'); return true;
   }
 }
 let pushTimer=null, enviando=false, pendente=false;
-function save(){ pendente=true; setSync('salvando'); clearTimeout(pushTimer); pushTimer=setTimeout(pushAgora,600); }
-async function pushAgora(){ if(enviando) return; enviando=true; pendente=false; try { const r=await fetch('/api/data',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(db)}); setSync(r.ok?'ok':'erro'); } catch(e){ setSync('off'); } enviando=false; if(pendente) pushAgora(); }
+function save(){ pendente=true; setSync('salvando'); try{ localStorage.setItem('bh-db', JSON.stringify(db)); }catch(e){} clearTimeout(pushTimer); pushTimer=setTimeout(pushAgora,600); }
+async function pushAgora(){
+  if(enviando) return; enviando=true; pendente=false; let sucesso=false;
+  try { const r=await fetch('/api/data',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(db)}); sucesso=r.ok; setSync(r.ok?'ok':'erro'); } catch(e){ setSync('off'); }
+  enviando=false;
+  if(sucesso){ try{ localStorage.setItem('bh-db', JSON.stringify(db)); }catch(e){} if(pendente) pushAgora(); }
+  else { pendente=true; clearTimeout(pushTimer); pushTimer=setTimeout(pushAgora, 4000); }  // tenta de novo até salvar
+}
 // Garante que uma alteração recém-feita (ex.: marcar a escala) seja salva mesmo se o app for fechado/minimizado antes dos 600ms.
 function flushSave(comKeepalive){
   if(!pendente || enviando) return;
@@ -1127,7 +1134,9 @@ function renderEmConstrucao(v){
 (async function boot(){
   document.getElementById('dataHoje').textContent=dataExtenso();
   const ok=await carregarDoServidor();
-  const s1=seedUsuarios(); const s2=seedCargos(); if(s1||s2) save();
+  if(!ok){ try{ const bk=localStorage.getItem('bh-db'); if(bk){ db=normalize(JSON.parse(bk)); setSync('off'); } }catch(e){} }
+  // só semeia/grava se realmente carregou do servidor — evita gravar dados vazios por cima
+  if(ok){ const s1=seedUsuarios(); const s2=seedCargos(); if(s1||s2) save(); }
   if(db.meses.length){ const hoje=hojeISO(); const m=db.meses.find(x=>{ const {ano,mes}=mesAnoDe(x); return `${ano}-${String(mes).padStart(2,'0')}`===hoje.slice(0,7); }); mesAtualId=m?m.id:db.meses[0].id; }
   if(db.funcionarios.length) dispFuncId=db.funcionarios[0].id;
   aplicarIdentidade();
