@@ -61,6 +61,11 @@ function mesclar(db, p) {
 }
 
 module.exports = async (req, res) => {
+  // DESLIGADO (jul/2026): o app passou a ser a fonte dos dados. A sincronização automática
+  // com a planilha foi desativada para não sobrescrever o que é preenchido no app.
+  res.status(200).json({ ok: false, desativado: 'sincronizacao automatica com a planilha desligada' });
+  return;
+  /* eslint-disable no-unreachable */
   const secret = process.env.CRON_SECRET || '';
   if (secret) { const auth = req.headers['authorization'] || ''; if (auth !== 'Bearer ' + secret) { res.status(401).json({ error: 'nao_autorizado' }); return; } }
   if (!KV_URL || !KV_TOKEN) { res.status(500).json({ error: 'kv_nao_configurado' }); return; }

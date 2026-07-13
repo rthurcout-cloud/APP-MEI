@@ -1,8 +1,5 @@
 {
   "framework": null,
   "buildCommand": "echo sem build necessario",
-  "outputDirectory": ".",
-  "crons": [
-    { "path": "/api/sync-cron", "schedule": "0 1 * * *" }
-  ]
+  "outputDirectory": "."
 }
