@@ -126,6 +126,15 @@
   .pay-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
   .ponto-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(258px,1fr)); gap:12px; align-items:stretch; }
   .ponto-grid .card { margin-bottom:0; }
+  /* Ponto: um dia por vez + agenda para escolher outro */
+  .ponto-um { display:grid; grid-template-columns:repeat(auto-fill,minmax(258px,1fr)); gap:12px; align-items:stretch; max-width:460px; }
+  .ponto-um .card { margin-bottom:0; }
+  .pd-item { display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid var(--border); border-radius:10px; margin-bottom:7px; cursor:pointer; }
+  .pd-item:hover { border-color:var(--accent); background:var(--surface-2); }
+  .pd-item.on { border-color:var(--accent); background:var(--accent-soft); }
+  .pd-item .dt { font-weight:700; font-size:13px; min-width:64px; }
+  .pd-item .ev { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; color:var(--muted); }
+  .pd-hoje { font-size:10px; font-weight:700; color:var(--accent); border:1px solid var(--accent); border-radius:20px; padding:1px 6px; }
   .pt-card { padding:12px 14px; display:flex; flex-direction:column; }
   .pt-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
   .pt-row { display:grid; grid-template-columns:1fr 58px 58px 46px; gap:5px; align-items:center; padding:5px 0; border-top:1px solid var(--border); font-size:13px; }
@@ -308,6 +317,17 @@
     </div>
   </div>
 </div>
+<!-- MODAL AGENDA DO PONTO (escolher outro dia) -->
+<div class="overlay" id="overlayPontoDias">
+  <div class="modal" style="max-width:460px">
+    <h2>📅 Escolher dia — <span id="pdMes" style="color:var(--accent)"></span></h2>
+    <div class="hint" style="margin-top:0">Toque no dia que você quer preencher.</div>
+    <div id="pdLista" style="position:relative;max-height:58vh;overflow:auto;margin-top:12px;padding-right:2px"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closePontoDias()">Fechar</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL ESCALA -->
 <div class="overlay" id="overlayEscala">
   <div class="modal">
@@ -355,6 +375,7 @@
 <script>
 let db = { funcionarios: [], meses: [], disponibilidade: {}, funcoes: [], config: {}, usuarios: [] };
 let mesAtualId = null, dispFuncId = null, mesRelId = null;
+let pontoDiaId = ''; // dia mostrado no Ponto (vazio = usa o dia de hoje)
 let accessCode = localStorage.getItem('bh-code') || '';
 
 /* ---------- Sincronização ---------- */
@@ -490,7 +511,7 @@ function popularSelectsMes(){
   const opts = db.meses.map(m=>`<option value="${m.id}" ${m.id===mesAtualId?'selected':''}>${esc(m.nome)}</option>`).join('');
   ['mesFunc','mesBanco','mesFin'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
 }
-function setMes(id){ mesAtualId=id; popularSelectsMes(); renderAtual(); }
+function setMes(id){ mesAtualId=id; pontoDiaId=''; popularSelectsMes(); renderAtual(); }
 
 /* ---------- Dashboard ---------- */
 function renderDashboard(){
@@ -808,7 +829,51 @@ function renderPonto(){
   if(!mes){ el.innerHTML='<div class="empty"><div class="big">🕐</div>Nenhum mês.</div>'; return; }
   const mesOpts=db.meses.map(x=>`<option value="${x.id}" ${x.id===mesAtualId?'selected':''}>${esc(x.nome)}</option>`).join('');
   const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
-  const cards=dias.map(d=>{
+  const hoje=hojeISO();
+  // mostra só o dia escolhido na agenda; sem escolha, mostra o dia de hoje
+  // (domingo tem 2 eventos na MESMA data — manhã e noite — por isso filter, não find)
+  const escolhido = dias.find(x=>x.id===pontoDiaId);
+  const mostrar = escolhido ? [escolhido] : dias.filter(x=>x.data===hoje);
+  const temHoje = dias.some(x=>x.data===hoje);
+  const btnHoje = (escolhido && temHoje) ? `<button class="btn secondary" onclick="pontoHoje()">↩️ Voltar para hoje</button>` : '';
+  const topo = `<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select><button class="btn secondary" onclick="openPontoDias()">📅 Escolher outro dia</button>${btnHoje}</div>`;
+  const dica = `<div class="hint" style="margin-bottom:12px">Mostrando <b>${escolhido?'o dia escolhido':'o dia de hoje'}</b> — use <b>📅 Escolher outro dia</b> para preencher outra data. Aparecem só as pessoas <b>escaladas</b> (definidas na Escala); preencha <b>entrada</b> e <b>saída</b> que as horas vão para o Banco de Horas.</div>`;
+  let corpo;
+  if(!dias.length) corpo='<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.</div>';
+  else if(!mostrar.length) corpo=`<div class="empty"><div class="big">🗓️</div>Não há evento cadastrado para hoje (${hoje.split('-').reverse().join('/')}).<br>Toque em <b>📅 Escolher outro dia</b> para preencher outra data.</div>`;
+  else corpo=`<div class="ponto-um"${mostrar.length>1?' style="max-width:940px"':''}>${mostrar.map(x=>cardPonto(x)).join('')}</div>`;
+  el.innerHTML=topo+dica+corpo;
+}
+function pontoHoje(){ pontoDiaId=''; renderPonto(); }
+function openPontoDias(){
+  const mes=mesById(mesAtualId); if(!mes) return;
+  document.getElementById('pdMes').textContent=mes.nome||'';
+  const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  const hoje=hojeISO();
+  const escolhido = dias.find(x=>x.id===pontoDiaId);
+  // marca o(s) dia(s) que estão sendo mostrados (domingo tem manhã e noite na mesma data)
+  const idsSel = escolhido ? [escolhido.id] : dias.filter(x=>x.data===hoje).map(x=>x.id);
+  document.getElementById('pdLista').innerHTML = dias.length ? dias.map(d=>{
+    const p=(d.data||'--').split('-');
+    const h=horasDia(d);
+    const sel = idsSel.indexOf(d.id)>=0;
+    return `<div class="pd-item ${sel?'on':''}" onclick="escolherPontoDia('${d.id}')">`
+      +`<span class="dt">${p[2]||'?'}/${p[1]||'?'} <span style="color:var(--muted);font-weight:500">${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</span></span>`
+      +`<span class="ev">${esc(d.evento||'Evento')}</span>`
+      +(d.data===hoje?'<span class="pd-hoje">hoje</span>':'')
+      +`<span class="badge ${h>0?'green':''}">${h>0?fmtHoras(h):'—'}</span></div>`;
+  }).join('') : '<div class="hint">Nenhum dia neste mês.</div>';
+  document.getElementById('overlayPontoDias').classList.add('open');
+  // abre a lista já posicionada no dia mostrado (senão o mês inteiro começa no dia 1)
+  setTimeout(()=>{
+    const lista=document.getElementById('pdLista'); if(!lista) return;
+    const sel=lista.querySelector('.pd-item.on'); if(!sel) return;
+    lista.scrollTop = Math.max(0, sel.offsetTop - lista.clientHeight/2 + sel.offsetHeight/2);
+  },30);
+}
+function closePontoDias(){ document.getElementById('overlayPontoDias').classList.remove('open'); }
+function escolherPontoDia(id){ pontoDiaId=id; closePontoDias(); renderPonto(); }
+function cardPonto(d){
     const escIds=(d.escala||[]).map(a=>a.funcId);
     const regIds=Object.keys(d.reg||{}).filter(k=>{const r=d.reg[k]; return r&&(r.entrada||r.saida||(+r.horas>0));});
     let ids=[...new Set([...escIds,...regIds])];
@@ -820,8 +885,6 @@ function renderPonto(){
     const temObs=d.obs&&d.obs.trim();
     const obsBtn=`<div style="margin-top:auto;padding-top:8px"><button class="btn secondary" style="width:100%;font-size:12px;padding:7px" onclick="openObs('${d.id}')">📝 Observação${temObs?' ✓':''}</button>${temObs?`<div class="hint" style="margin:5px 0 0;font-size:11px;white-space:normal;line-height:1.35">🗒️ ${esc(d.obs.trim())}</div>`:''}</div>`;
     return `<div class="card pt-card"><div class="pt-head"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:0">${p[2]||'?'}/${p[1]||'?'} · ${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="pt-row pt-cab"><span>Equipe</span><span>Ent</span><span>Saí</span><span>Hrs</span></div>${rows||vazio}${obsBtn}</div>`;
-  }).join('');
-  el.innerHTML=`<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select></div><div class="hint" style="margin-bottom:12px">Aparecem só as pessoas <b>escaladas</b> de cada dia (definidas na Escala). Preencha <b>entrada</b> e <b>saída</b> — as horas são calculadas e vão para o Banco de Horas. Quando faltam horários, marca <b>"falta"</b>.</div>`+(dias.length?('<div class="ponto-grid">'+cards+'</div>'):'<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.</div>');
 }
 function setPonto(diaId, fid, campo, val){
   if(usuarioAtual && !ehAdmin() && fid!==usuarioAtual.funcId) return;
