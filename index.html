@@ -90,6 +90,13 @@
   .esc-btn:hover { border-color:var(--accent); }
   .esc-btn:active { transform:scale(.96); }
   .esc-btn.on { background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:600; }
+  .esc-btn.no { background:var(--red-soft); border-color:var(--red); color:var(--red); font-weight:600; }
+  .esc-legenda { display:flex; gap:14px; flex-wrap:wrap; align-items:center; font-size:12px; color:var(--muted); margin:2px 0 10px; }
+  .esc-legenda .lg { display:inline-flex; align-items:center; gap:6px; }
+  .esc-legenda .sw { width:12px; height:12px; border-radius:4px; border:1px solid; }
+  .esc-legenda .sw.v { background:var(--green-soft); border-color:var(--green); }
+  .esc-legenda .sw.r { background:var(--red-soft); border-color:var(--red); }
+  .esc-legenda .sw.n { background:var(--surface-2); border-color:var(--border); }
   .escala-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; align-items:start; }
   .escala-grid .card { padding:12px; margin-bottom:0; }
   .ev-nome { font-weight:600; font-size:13px; line-height:1.3; }
@@ -475,7 +482,7 @@ function todosDias(){ const out=[]; db.meses.forEach(m=>(m.dias||[]).forEach(d=>
 
 /* ---------- Navegação ---------- */
 const PAGES=['dashboard','agenda','funcionarios','ponto','confirmacoes','banco','financeiro','relatorios','funcoes','config','minhas'];
-const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Dias que cada funcionário pode trabalhar.'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Defina o cargo de cada funcionário.'], config:['Configurações','Ajustes do sistema.'], minhas:['Minhas horas','Suas horas e valor a receber.'] };
+const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Toque no nome para escalar (verde) ou marcar que não pode (vermelho).'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Defina o cargo de cada funcionário.'], config:['Configurações','Ajustes do sistema.'], minhas:['Minhas horas','Suas horas e valor a receber.'] };
 let viewAtual='dashboard';
 function navegar(v){
   if(usuarioAtual && !ehAdmin() && !['agenda','minhas','ponto'].includes(v)) v='agenda';
@@ -654,8 +661,8 @@ function renderAgenda(){
   if(!db.meses.length){ cont.innerHTML='<div class="empty"><div class="big">📅</div>Nenhum mês cadastrado.</div>'; return; }
   if(!funcById(dispFuncId)) dispFuncId=db.funcionarios[0].id;
   if(!mesById(mesAtualId)) mesAtualId=db.meses[0].id;
-  cont.innerHTML=`<div class="toolbar"><div class="seg"><button class="${agendaAba==='escala'?'on':''}" onclick="agendaAba='escala';renderAgenda()">📋 Escala</button><button class="${agendaAba==='disp'?'on':''}" onclick="agendaAba='disp';renderAgenda()">🗓️ Disponibilidade</button></div></div><div id="agenda-box"></div>`;
-  if(agendaAba==='disp') renderDisp('agenda-box'); else renderEscala('agenda-box');
+  cont.innerHTML=`<div id="agenda-box"></div>`;
+  renderEscala('agenda-box');
 }
 function renderDisp(boxId){
   const box=document.getElementById(boxId); const mes=mesById(mesAtualId); const f=funcById(dispFuncId);
@@ -673,10 +680,12 @@ function montarBlocoEscala(d){
   const arr=(d.escala||[]);
   const nConf=arr.filter(a=>a.confirmado).length;
   const admin=ehAdmin(); const meu=usuarioAtual?usuarioAtual.funcId:null;
-  const botoes=db.funcionarios.map(f=>{ const a=arr.find(x=>x.funcId===f.id); const on=!!a; const fc=(a&&a.funcaoId)?db.funcoes.find(x=>x.id===a.funcaoId):null;
+  const naoArr=(d.naoPode||[]);
+  const botoes=db.funcionarios.map(f=>{ const a=arr.find(x=>x.funcId===f.id); const on=!!a; const nao=naoArr.indexOf(f.id)>=0; const fc=(a&&a.funcaoId)?db.funcoes.find(x=>x.id===a.funcaoId):null;
     const pode = admin || f.id===meu;
     const attr = pode? `onclick="toggleEscalaFunc('${d.id}','${f.id}')"` : 'style="opacity:.55;cursor:default"';
-    return `<button class="esc-btn ${on?'on':''}" ${attr}><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${on?' ✓':''}</button>`; }).join('');
+    const cls = on?'on':(nao?'no':''); const marca = on?' ✓':(nao?' ✗':'');
+    return `<button class="esc-btn ${cls}" ${attr}><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${marca}</button>`; }).join('');
   const conftag = arr.length? `<span class="badge ${nConf===arr.length?'green':'amber'}" style="font-size:9px;padding:1px 6px">${nConf}/${arr.length}</span>` : '';
   const link = admin? `<span class="mini-link" onclick="openEscala('${d.id}')">⚙ função</span>` : '';
   return `<div class="cal-ev"><div class="cal-ev-nome">${esc(d.evento)||'Evento'} ${conftag}</div><div class="esc-botoes">${botoes}</div>${link}</div>`;
@@ -703,7 +712,8 @@ function renderEscala(boxId){
     const evs=(porData[iso]||[]);
     cells+=`<div class="cal-cel"><div class="cal-num">${day}</div>${evs.map(montarBlocoEscala).join('')}</div>`;
   }
-  box.innerHTML=cab+`<div class="cal-wrap"><div class="cal-head">${head}</div><div class="cal-grid">${cells}</div></div><div class="hint" style="margin-top:8px">📱 No celular, use os botões <b>−</b> / <b>+</b> (Zoom) para diminuir e fazer a semana caber na tela, ou deslize para o lado.</div>`;
+  const legenda=`<div class="esc-legenda"><span class="lg"><span class="sw n"></span>não definido</span><span class="lg"><span class="sw v"></span>escalado / pode ✓</span><span class="lg"><span class="sw r"></span>não pode ✗</span><span style="color:var(--muted)">— toque no nome para alternar.</span></div>`;
+  box.innerHTML=cab+legenda+`<div class="cal-wrap"><div class="cal-head">${head}</div><div class="cal-grid">${cells}</div></div><div class="hint" style="margin-top:8px">📱 No celular, use os botões <b>−</b> / <b>+</b> (Zoom) para diminuir e fazer a semana caber na tela, ou deslize para o lado.</div>`;
 }
 function openEscala(diaId){
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
@@ -718,10 +728,13 @@ function openEscala(diaId){
 function toggleEscalaFunc(diaId, fid){
   if(usuarioAtual && !ehAdmin() && fid!==usuarioAtual.funcId) return;
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
-  if(!d.escala) d.escala=[];
-  const i=d.escala.findIndex(a=>a.funcId===fid);
-  if(i>=0) d.escala.splice(i,1);
-  else d.escala.push({funcId:fid, funcaoId:((funcById(fid)||{}).cargoId||''), confirmado:false});
+  if(!d.escala) d.escala=[]; if(!d.naoPode) d.naoPode=[];
+  const iEsc=d.escala.findIndex(a=>a.funcId===fid);
+  const iNao=d.naoPode.indexOf(fid);
+  // ciclo: neutro -> escalado (verde) -> não pode (vermelho) -> neutro
+  if(iEsc>=0){ d.escala.splice(iEsc,1); if(iNao<0) d.naoPode.push(fid); }
+  else if(iNao>=0){ d.naoPode.splice(iNao,1); }
+  else { d.escala.push({funcId:fid, funcaoId:((funcById(fid)||{}).cargoId||''), confirmado:false}); }
   save(); renderAgenda();
 }
 function closeEscala(){ document.getElementById('overlayEscala').classList.remove('open'); }
@@ -729,7 +742,10 @@ document.getElementById('overlayEscala').addEventListener('click',e=>{ if(e.targ
 function salvarEscala(){
   const mes=mesById(mesAtualId); const id=document.getElementById('escId').value; const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return;
   const escala=[]; db.funcionarios.forEach(f=>{ const sel=document.getElementById('esc-'+f.id); const v=sel?sel.value:''; if(v){ const conf=document.getElementById('conf-'+f.id); escala.push({funcId:f.id, funcaoId:(v==='__sem__'?'':v), confirmado:conf?conf.checked:false}); } });
-  d.escala=escala; save(); closeEscala(); renderAgenda();
+  d.escala=escala;
+  // quem foi escalado aqui não pode continuar marcado como "não pode"
+  if(d.naoPode&&d.naoPode.length){ const ids=escala.map(a=>a.funcId); d.naoPode=d.naoPode.filter(fid=>ids.indexOf(fid)<0); }
+  save(); closeEscala(); renderAgenda();
 }
 
 /* ---------- Funcionários ---------- */
