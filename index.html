@@ -114,6 +114,9 @@
   .cal-ev { border-top:1px solid var(--border); padding-top:8px; margin-top:8px; }
   .cal-ev:first-of-type { border-top:none; padding-top:2px; margin-top:2px; }
   .cal-ev-nome { font-size:12px; font-weight:600; margin-bottom:6px; line-height:1.25; }
+  .cal-ev-nome.edit { cursor:pointer; }
+  .cal-ev-nome.edit:hover { color:var(--accent); }
+  .ev-pen { font-size:.8em; opacity:.5; }
   .cal-ev .esc-botoes { flex-direction:column; gap:5px; }
   .cal-ev .esc-btn { width:100%; justify-content:flex-start; padding:6px 8px; font-size:12px; border-radius:7px; }
   /* Zoom do calendário da Escala (controle no celular) */
@@ -332,6 +335,21 @@
     <div id="pdLista" style="position:relative;max-height:58vh;overflow:auto;margin-top:12px;padding-right:2px"></div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closePontoDias()">Fechar</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL RENOMEAR EVENTO -->
+<div class="overlay" id="overlayEvento">
+  <div class="modal" style="max-width:440px">
+    <h2>✏️ Nome do evento</h2>
+    <input type="hidden" id="evDiaId">
+    <div class="hint" style="margin-top:0" id="evData"></div>
+    <div class="field" style="margin-top:12px"><label>Como esse evento aparece na agenda</label>
+      <input id="evNome" placeholder="Ex.: Culto, Ensaio, Deboras, Restaurando Vidas..." onkeydown="if(event.key==='Enter')salvarEvento()">
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeEvento()">Cancelar</button>
+      <button class="btn" onclick="salvarEvento()">Salvar nome</button>
     </div>
   </div>
 </div>
@@ -688,7 +706,11 @@ function montarBlocoEscala(d){
     return `<button class="esc-btn ${cls}" ${attr}><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${marca}</button>`; }).join('');
   const conftag = arr.length? `<span class="badge ${nConf===arr.length?'green':'amber'}" style="font-size:9px;padding:1px 6px">${nConf}/${arr.length}</span>` : '';
   const link = admin? `<span class="mini-link" onclick="openEscala('${d.id}')">⚙ função</span>` : '';
-  return `<div class="cal-ev"><div class="cal-ev-nome">${esc(d.evento)||'Evento'} ${conftag}</div><div class="esc-botoes">${botoes}</div>${link}</div>`;
+  const nomeEv = esc(d.evento)||'Evento';
+  const titulo = admin
+    ? `<div class="cal-ev-nome edit" title="Tocar para renomear o evento" onclick="openEvento('${d.id}')">${nomeEv} <span class="ev-pen">✏️</span> ${conftag}</div>`
+    : `<div class="cal-ev-nome">${nomeEv} ${conftag}</div>`;
+  return `<div class="cal-ev">${titulo}<div class="esc-botoes">${botoes}</div>${link}</div>`;
 }
 let calCol = parseInt(localStorage.getItem('bh-calcol')||'',10);
 function aplicarCalZoom(){ if(!calCol||isNaN(calCol)) calCol=(window.innerWidth<=640?92:132); calCol=Math.max(46,Math.min(176,calCol)); document.documentElement.style.setProperty('--cal-col',calCol+'px'); }
@@ -925,6 +947,23 @@ function salvarObs(){
   d.obs=document.getElementById('obsTexto').value.trim();
   save(); closeObs(); renderPonto();
 }
+function openEvento(diaId){
+  if(!ehAdmin()) return;
+  const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
+  document.getElementById('evDiaId').value=d.id;
+  const p=(d.data||'--').split('-');
+  document.getElementById('evData').textContent=(p[2]||'?')+'/'+(p[1]||'?')+' · '+esc((d.diaSemana||diaSemanaPT(d.data)||''));
+  document.getElementById('evNome').value=d.evento||'';
+  document.getElementById('overlayEvento').classList.add('open');
+  setTimeout(()=>{ const i=document.getElementById('evNome'); i.focus(); i.select(); },60);
+}
+function closeEvento(){ document.getElementById('overlayEvento').classList.remove('open'); }
+function salvarEvento(){
+  const id=document.getElementById('evDiaId').value; const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return;
+  d.evento=document.getElementById('evNome').value.trim();
+  save(); closeEvento(); renderAgenda();
+}
+document.getElementById('overlayEvento').addEventListener('click',e=>{ if(e.target.id==='overlayEvento') closeEvento(); });
 document.getElementById('overlayObs').addEventListener('click',e=>{ if(e.target.id==='overlayObs') closeObs(); });
 
 /* ---------- Relatórios (PDF por pessoa) ---------- */
