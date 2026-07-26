@@ -86,7 +86,9 @@
   .chip .dot { width:8px; height:8px; border-radius:50%; }
   .esc-botoes { display:flex; gap:8px; flex-wrap:wrap; }
   .esc-btn { display:inline-flex; align-items:center; gap:7px; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:22px; padding:9px 15px; cursor:pointer; font-size:14px; font-weight:500; transition:transform .1s; }
-  .esc-btn .dot { width:10px; height:10px; border-radius:50%; }
+  .esc-btn { min-width:0; max-width:100%; }
+  .esc-btn .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .esc-btn .esc-lbl { min-width:0; overflow-wrap:anywhere; word-break:break-word; text-align:left; line-height:1.18; }
   .esc-btn:hover { border-color:var(--accent); }
   .esc-btn:active { transform:scale(.96); }
   .esc-btn.on { background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:600; }
@@ -147,7 +149,7 @@
   .pd-hoje { font-size:10px; font-weight:700; color:var(--accent); border:1px solid var(--accent); border-radius:20px; padding:1px 6px; }
   .pt-card { padding:12px 14px; display:flex; flex-direction:column; }
   .pt-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-  .pt-row { display:grid; grid-template-columns:1fr 54px 54px 42px 24px; gap:5px; align-items:center; padding:5px 0; border-top:1px solid var(--border); font-size:13px; }
+  .pt-row { display:grid; grid-template-columns:1fr 66px 66px 40px 22px; gap:5px; align-items:center; padding:5px 0; border-top:1px solid var(--border); font-size:13px; }
   .pt-clear { width:22px; height:22px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:12px; line-height:1; cursor:pointer; padding:0; }
   .pt-clear:hover { border-color:var(--red); color:var(--red); }
   .pt-row .nm { display:flex; align-items:center; gap:6px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
@@ -705,7 +707,7 @@ function montarBlocoEscala(d){
     const pode = admin || f.id===meu;
     const attr = pode? `onclick="toggleEscalaFunc('${d.id}','${f.id}')"` : 'style="opacity:.55;cursor:default"';
     const cls = on?'on':(nao?'no':''); const marca = on?' ✓':(nao?' ✗':'');
-    return `<button class="esc-btn ${cls}" ${attr}><span class="dot" style="background:${corFunc(f.id)}"></span>${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${marca}</button>`; }).join('');
+    return `<button class="esc-btn ${cls}" ${attr}><span class="dot" style="background:${corFunc(f.id)}"></span><span class="esc-lbl">${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${marca}</span></button>`; }).join('');
   const conftag = arr.length? `<span class="badge ${nConf===arr.length?'green':'amber'}" style="font-size:9px;padding:1px 6px">${nConf}/${arr.length}</span>` : '';
   const link = admin? `<span class="mini-link" onclick="openEscala('${d.id}')">⚙ função</span>` : '';
   const nomeEv = esc(d.evento)||'Evento';
