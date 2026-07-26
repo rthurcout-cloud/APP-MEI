@@ -88,7 +88,8 @@
   .esc-btn { display:inline-flex; align-items:center; gap:7px; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:22px; padding:9px 15px; cursor:pointer; font-size:14px; font-weight:500; transition:transform .1s; }
   .esc-btn { min-width:0; max-width:100%; }
   .esc-btn .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-  .esc-btn .esc-lbl { min-width:0; overflow-wrap:anywhere; word-break:break-word; text-align:left; line-height:1.18; }
+  .esc-btn .esc-lbl { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left; }
+  .esc-btn .esc-mk { flex-shrink:0; font-weight:700; }
   .esc-btn:hover { border-color:var(--accent); }
   .esc-btn:active { transform:scale(.96); }
   .esc-btn.on { background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:600; }
@@ -706,8 +707,8 @@ function montarBlocoEscala(d){
   const botoes=db.funcionarios.map(f=>{ const a=arr.find(x=>x.funcId===f.id); const on=!!a; const nao=naoArr.indexOf(f.id)>=0; const fc=(a&&a.funcaoId)?db.funcoes.find(x=>x.id===a.funcaoId):null;
     const pode = admin || f.id===meu;
     const attr = pode? `onclick="toggleEscalaFunc('${d.id}','${f.id}')"` : 'style="opacity:.55;cursor:default"';
-    const cls = on?'on':(nao?'no':''); const marca = on?' ✓':(nao?' ✗':'');
-    return `<button class="esc-btn ${cls}" ${attr}><span class="dot" style="background:${corFunc(f.id)}"></span><span class="esc-lbl">${esc(f.nome)}${fc?' · '+esc(fc.nome):''}${marca}</span></button>`; }).join('');
+    const cls = on?'on':(nao?'no':''); const mk = on?'✓':(nao?'✗':'');
+    return `<button class="esc-btn ${cls}" ${attr}><span class="dot" style="background:${corFunc(f.id)}"></span><span class="esc-lbl">${esc(f.nome)}${fc?' · '+esc(fc.nome):''}</span>${mk?`<span class="esc-mk">${mk}</span>`:''}</button>`; }).join('');
   const conftag = arr.length? `<span class="badge ${nConf===arr.length?'green':'amber'}" style="font-size:9px;padding:1px 6px">${nConf}/${arr.length}</span>` : '';
   const link = admin? `<span class="mini-link" onclick="openEscala('${d.id}')">⚙ função</span>` : '';
   const nomeEv = esc(d.evento)||'Evento';
