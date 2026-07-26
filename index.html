@@ -147,7 +147,9 @@
   .pd-hoje { font-size:10px; font-weight:700; color:var(--accent); border:1px solid var(--accent); border-radius:20px; padding:1px 6px; }
   .pt-card { padding:12px 14px; display:flex; flex-direction:column; }
   .pt-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-  .pt-row { display:grid; grid-template-columns:1fr 58px 58px 46px; gap:5px; align-items:center; padding:5px 0; border-top:1px solid var(--border); font-size:13px; }
+  .pt-row { display:grid; grid-template-columns:1fr 54px 54px 42px 24px; gap:5px; align-items:center; padding:5px 0; border-top:1px solid var(--border); font-size:13px; }
+  .pt-clear { width:22px; height:22px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:12px; line-height:1; cursor:pointer; padding:0; }
+  .pt-clear:hover { border-color:var(--red); color:var(--red); }
   .pt-row .nm { display:flex; align-items:center; gap:6px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
   .pt-row input { width:100%; padding:4px 2px; font-size:12px; text-align:center; }
   .pt-row input::-webkit-calendar-picker-indicator { display:none; }
@@ -916,20 +918,34 @@ function cardPonto(d){
     const regIds=Object.keys(d.reg||{}).filter(k=>{const r=d.reg[k]; return r&&(r.entrada||r.saida||(+r.horas>0));});
     let ids=[...new Set([...escIds,...regIds])];
     if(!ehAdmin()&&usuarioAtual&&usuarioAtual.funcId) ids=ids.filter(i=>i===usuarioAtual.funcId);
+    const podeEditar = fid=> ehAdmin() || (usuarioAtual && usuarioAtual.funcId===fid);
     const rows=ids.map(fid=>{ const f=funcById(fid); if(!f) return ''; const r=regDe(d,fid); const bateu=r.entrada&&r.saida;
-      return `<div class="pt-row"><div class="nm"><span class="avatar" style="width:20px;height:20px;font-size:10px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'} bd">${bateu?fmtHoras(r.horas):'falta'}</span></div>`; }).filter(Boolean).join('');
+      const temHora = r.entrada||r.saida||(+r.horas>0);
+      const limpar = (podeEditar(fid)&&temHora) ? `<button class="pt-clear" title="Apagar horários" onclick="limparPonto('${d.id}','${f.id}')">✕</button>` : '<span></span>';
+      return `<div class="pt-row"><div class="nm"><span class="avatar" style="width:20px;height:20px;font-size:10px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'} bd">${bateu?fmtHoras(r.horas):'falta'}</span>${limpar}</div>`; }).filter(Boolean).join('');
     const vazio=`<div class="pt-row" style="color:var(--muted);justify-content:center;padding:10px 0">${(!ehAdmin()&&usuarioAtual)?'Você não está escalado neste dia':'Ninguém escalado neste dia'}</div>`;
     const p=(d.data||'--').split('-');
     const temObs=d.obs&&d.obs.trim();
     const obsBtn=`<div style="margin-top:auto;padding-top:8px"><button class="btn secondary" style="width:100%;font-size:12px;padding:7px" onclick="openObs('${d.id}')">📝 Observação${temObs?' ✓':''}</button>${temObs?`<div class="hint" style="margin:5px 0 0;font-size:11px;white-space:normal;line-height:1.35">🗒️ ${esc(d.obs.trim())}</div>`:''}</div>`;
-    return `<div class="card pt-card"><div class="pt-head"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:0">${p[2]||'?'}/${p[1]||'?'} · ${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="pt-row pt-cab"><span>Equipe</span><span>Ent</span><span>Saí</span><span>Hrs</span></div>${rows||vazio}${obsBtn}</div>`;
+    return `<div class="card pt-card"><div class="pt-head"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:0">${p[2]||'?'}/${p[1]||'?'} · ${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</div></div><span class="badge">${fmtHoras(horasDia(d))}</span></div><div class="pt-row pt-cab"><span>Equipe</span><span>Ent</span><span>Saí</span><span>Hrs</span><span></span></div>${rows||vazio}${obsBtn}</div>`;
 }
 function setPonto(diaId, fid, campo, val){
   if(usuarioAtual && !ehAdmin() && fid!==usuarioAtual.funcId) return;
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
   if(!d.reg) d.reg={}; if(!d.reg[fid]) d.reg[fid]={entrada:'',saida:'',horas:0};
   d.reg[fid][campo]=val;
-  const h=horasEntre(d.reg[fid].entrada,d.reg[fid].saida); if(h!=null) d.reg[fid].horas=h;
+  const r=d.reg[fid];
+  // se faltar entrada OU saída, zera as horas; senão recalcula
+  if(!r.entrada || !r.saida){ r.horas=0; }
+  else { const h=horasEntre(r.entrada,r.saida); if(h!=null) r.horas=h; }
+  save(); renderPonto();
+}
+function limparPonto(diaId, fid){
+  if(usuarioAtual && !ehAdmin() && fid!==usuarioAtual.funcId) return;
+  const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d||!d.reg||!d.reg[fid]) return;
+  const f=funcById(fid);
+  if(!confirm('Apagar os horários de '+((f&&f.nome)||'')+' neste dia?')) return;
+  d.reg[fid]={entrada:'',saida:'',horas:0};
   save(); renderPonto();
 }
 function openObs(diaId){
