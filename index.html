@@ -1003,12 +1003,11 @@ function renderRelatorios(){
     <div class="hint" style="margin-bottom:14px">Gera um PDF por pessoa com os dias trabalhados, horários, observações, total de horas e valor a receber. O arquivo sai como <b>"Mês de Junho - Nathan.pdf"</b>.</div>
     <div class="pay-grid">${cards}</div>`;
 }
-function montarRelatorio(mesId, funcId){
-  if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Aguarde 1-2 segundos e tente de novo.'); return null; }
-  const mes=mesById(mesId), f=funcById(funcId); if(!mes||!f) return null;
+// desenha o relatório de UM funcionário na página atual do doc
+function paginaRelatorio(doc, mes, f){
+  const funcId=f.id;
   const dias=(mes.dias||[]).slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).filter(d=>{ const r=regDe(d,funcId); return (+r.horas||0)>0||r.entrada||r.saida; });
-  const { jsPDF }=window.jspdf; const doc=new jsPDF();
-  doc.setFontSize(15); doc.text(((db.config&&db.config.igreja)||'Primeira Igreja Batista de Niterói'), 14, 18);
+  doc.setFontSize(15); doc.setTextColor(0); doc.text(((db.config&&db.config.igreja)||'Primeira Igreja Batista de Niterói'), 14, 18);
   doc.setFontSize(11); doc.setTextColor(110); doc.text('Relatório de horas trabalhadas', 14, 25);
   doc.setTextColor(0); doc.setFontSize(13); doc.text(`${f.nome}  —  ${mes.nome}`, 14, 34);
   const body=dias.map(d=>{ const r=regDe(d,funcId); const p=(d.data||'--').split('-'); return [ `${p[2]||'?'}/${p[1]||'?'}`, (d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3), d.evento||'', r.entrada||'-', r.saida||'-', fmtHoras(r.horas), d.obs||'' ]; });
@@ -1020,6 +1019,13 @@ function montarRelatorio(mesId, funcId){
   doc.text(`Valor por hora: ${money(f.valorHora)}`, 14, y+7);
   doc.setTextColor(20,120,70); doc.setFontSize(13); doc.text(`Total a receber: ${money(valor)}`, 14, y+15);
   doc.setTextColor(150); doc.setFontSize(8.5); doc.text(`Gerado em ${dataExtenso()}`, 14, 287);
+  return { totH, valor };
+}
+function montarRelatorio(mesId, funcId){
+  if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Aguarde 1-2 segundos e tente de novo.'); return null; }
+  const mes=mesById(mesId), f=funcById(funcId); if(!mes||!f) return null;
+  const { jsPDF }=window.jspdf; const doc=new jsPDF();
+  paginaRelatorio(doc, mes, f);
   const nomeArq=`Mês de ${(mes.nome||'').replace(/\s*\d{4}/,'').trim()} - ${f.nome}.pdf`;
   return { doc, nomeArq, titulo:`${f.nome} — ${mes.nome}` };
 }
@@ -1037,7 +1043,28 @@ async function compartilharRelatorio(mesId, funcId){
     }
   }catch(e){ /* usuário cancelou o compartilhamento */ }
 }
-function gerarTodos(){ const mes=mesById(mesRelId); if(!mes) return; if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Tente de novo.'); return; } db.funcionarios.forEach((f,i)=>setTimeout(()=>gerarRelatorio(mes.id,f.id), i*500)); }
+function gerarTodos(){
+  const mes=mesById(mesRelId); if(!mes) return;
+  if(!(window.jspdf&&window.jspdf.jsPDF)){ alert('O gerador de PDF ainda está carregando. Aguarde 1-2 segundos e tente de novo.'); return; }
+  const { jsPDF }=window.jspdf; const doc=new jsPDF();
+  const resumo=[]; let totGeralH=0, totGeralV=0;
+  db.funcionarios.forEach((f,i)=>{
+    if(i>0) doc.addPage();
+    const r=paginaRelatorio(doc, mes, f);
+    resumo.push([f.nome, fmtHoras(r.totH), money(f.valorHora), money(r.valor)]);
+    totGeralH+=r.totH; totGeralV+=r.valor;
+  });
+  // página de resumo geral
+  doc.addPage();
+  doc.setFontSize(15); doc.setTextColor(0); doc.text(((db.config&&db.config.igreja)||'Primeira Igreja Batista de Niterói'), 14, 18);
+  doc.setFontSize(11); doc.setTextColor(110); doc.text('Resumo geral — '+mes.nome, 14, 25);
+  doc.autoTable({ startY:34, head:[['Funcionário','Horas','Valor/hora','Total a receber']], body:resumo, styles:{fontSize:10,cellPadding:2.6}, headStyles:{fillColor:[79,124,255]} });
+  let y=(doc.lastAutoTable?doc.lastAutoTable.finalY:50)+12;
+  doc.setTextColor(0); doc.setFontSize(12); doc.text(`Total de horas (equipe): ${fmtHoras(totGeralH)}`, 14, y);
+  doc.setTextColor(20,120,70); doc.setFontSize(14); doc.text(`Total a pagar (equipe): ${money(totGeralV)}`, 14, y+9);
+  doc.setTextColor(150); doc.setFontSize(8.5); doc.text(`Gerado em ${dataExtenso()}`, 14, 287);
+  doc.save(`Relatorio de Horas - ${(mes.nome||'').trim()} (todos).pdf`);
+}
 
 /* ---------- Configurações ---------- */
 function aplicarIdentidade(){
