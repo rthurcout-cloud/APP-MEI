@@ -107,9 +107,11 @@
   .escala-grid .esc-botoes { flex-direction:column; gap:6px; }
   .escala-grid .esc-btn { width:100%; justify-content:flex-start; padding:7px 10px; font-size:13px; border-radius:8px; }
   .mini-link { font-size:11px; color:var(--accent); cursor:pointer; margin-top:10px; display:inline-block; }
-  .cal-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+  .cal-wrap { overflow:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; max-height:74vh; }
   .cal-head, .cal-grid { display:grid; grid-template-columns:repeat(7,minmax(132px,1fr)); gap:8px; min-width:920px; }
-  .cal-head { margin-bottom:8px; }
+  .cal-head { position:sticky; top:0; z-index:6; background:var(--bg); margin-bottom:2px; padding:2px 0 8px; }
+  .add-ev { display:inline-block; margin-top:6px; opacity:.7; }
+  .add-ev:hover { opacity:1; }
   .cal-col { text-align:center; color:var(--muted); font-size:12px; font-weight:600; padding:4px 0; }
   .cal-cel { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px; min-height:64px; }
   .cal-cel.vazio { background:none; border:none; }
@@ -346,15 +348,16 @@
 <!-- MODAL RENOMEAR EVENTO -->
 <div class="overlay" id="overlayEvento">
   <div class="modal" style="max-width:440px">
-    <h2>✏️ Nome do evento</h2>
-    <input type="hidden" id="evDiaId">
+    <h2 id="evTitulo">✏️ Nome do evento</h2>
+    <input type="hidden" id="evDiaId"><input type="hidden" id="evNovaData">
     <div class="hint" style="margin-top:0" id="evData"></div>
     <div class="field" style="margin-top:12px"><label>Como esse evento aparece na agenda</label>
       <input id="evNome" placeholder="Ex.: Culto, Ensaio, Deboras, Restaurando Vidas..." onkeydown="if(event.key==='Enter')salvarEvento()">
     </div>
     <div class="modal-actions">
+      <button class="btn danger" id="evExcluir" onclick="excluirEvento()" style="margin-right:auto;display:none">Excluir</button>
       <button class="btn secondary" onclick="closeEvento()">Cancelar</button>
-      <button class="btn" onclick="salvarEvento()">Salvar nome</button>
+      <button class="btn" id="evSalvar" onclick="salvarEvento()">Salvar nome</button>
     </div>
   </div>
 </div>
@@ -737,7 +740,8 @@ function renderEscala(boxId){
   for(let day=1;day<=nd;day++){
     const iso=`${ano}-${String(mm).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const evs=(porData[iso]||[]);
-    cells+=`<div class="cal-cel"><div class="cal-num">${day}</div>${evs.map(montarBlocoEscala).join('')}</div>`;
+    const addEv=ehAdmin()?`<span class="mini-link add-ev" onclick="novoEvento('${iso}')">+ evento</span>`:'';
+    cells+=`<div class="cal-cel"><div class="cal-num">${day}</div>${evs.map(montarBlocoEscala).join('')}${addEv}</div>`;
   }
   const legenda=`<div class="esc-legenda"><span class="lg"><span class="sw n"></span>não definido</span><span class="lg"><span class="sw v"></span>escalado / pode ✓</span><span class="lg"><span class="sw r"></span>não pode ✗</span><span style="color:var(--muted)">— toque no nome para alternar.</span></div>`;
   box.innerHTML=cab+legenda+`<div class="cal-wrap"><div class="cal-head">${head}</div><div class="cal-grid">${cells}</div></div><div class="hint" style="margin-top:8px">📱 No celular, use os botões <b>−</b> / <b>+</b> (Zoom) para diminuir e fazer a semana caber na tela, ou deslize para o lado.</div>`;
@@ -970,16 +974,46 @@ function openEvento(diaId){
   if(!ehAdmin()) return;
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
   document.getElementById('evDiaId').value=d.id;
+  document.getElementById('evNovaData').value='';
   const p=(d.data||'--').split('-');
   document.getElementById('evData').textContent=(p[2]||'?')+'/'+(p[1]||'?')+' · '+esc((d.diaSemana||diaSemanaPT(d.data)||''));
   document.getElementById('evNome').value=d.evento||'';
+  document.getElementById('evTitulo').textContent='✏️ Nome do evento';
+  document.getElementById('evSalvar').textContent='Salvar nome';
+  document.getElementById('evExcluir').style.display='';
   document.getElementById('overlayEvento').classList.add('open');
   setTimeout(()=>{ const i=document.getElementById('evNome'); i.focus(); i.select(); },60);
 }
+function novoEvento(iso){
+  if(!ehAdmin()) return;
+  document.getElementById('evDiaId').value='';
+  document.getElementById('evNovaData').value=iso;
+  const p=(iso||'--').split('-');
+  document.getElementById('evData').textContent=(p[2]||'?')+'/'+(p[1]||'?')+' · '+esc(diaSemanaPT(iso)||'');
+  document.getElementById('evNome').value='';
+  document.getElementById('evTitulo').textContent='➕ Novo evento';
+  document.getElementById('evSalvar').textContent='Adicionar evento';
+  document.getElementById('evExcluir').style.display='none';
+  document.getElementById('overlayEvento').classList.add('open');
+  setTimeout(()=>{ document.getElementById('evNome').focus(); },60);
+}
 function closeEvento(){ document.getElementById('overlayEvento').classList.remove('open'); }
 function salvarEvento(){
-  const id=document.getElementById('evDiaId').value; const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return;
-  d.evento=document.getElementById('evNome').value.trim();
+  const nome=document.getElementById('evNome').value.trim();
+  const mes=mesById(mesAtualId); if(!mes) return;
+  const id=document.getElementById('evDiaId').value;
+  const nova=document.getElementById('evNovaData').value;
+  if(id){ const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return; d.evento=nome; }
+  else if(nova){ if(!nome){ document.getElementById('evNome').focus(); return; } if(!mes.dias) mes.dias=[]; mes.dias.push({id:uid('d'), data:nova, diaSemana:diaSemanaPT(nova), evento:nome, escala:[], reg:{}}); }
+  else return;
+  save(); closeEvento(); renderAgenda();
+}
+function excluirEvento(){
+  const mes=mesById(mesAtualId); const id=document.getElementById('evDiaId').value;
+  const d=mes&&(mes.dias||[]).find(x=>x.id===id); if(!d) return;
+  const temPonto=d.reg&&Object.keys(d.reg).some(k=>{const r=d.reg[k]; return r&&(r.entrada||r.saida||(+r.horas>0));});
+  if(!confirm('Excluir o evento "'+(d.evento||'')+'"'+(temPonto?'\n\n⚠️ Ele tem horários de ponto lançados que serão apagados junto.':'')+'?')) return;
+  mes.dias=mes.dias.filter(x=>x.id!==id);
   save(); closeEvento(); renderAgenda();
 }
 document.getElementById('overlayEvento').addEventListener('click',e=>{ if(e.target.id==='overlayEvento') closeEvento(); });
