@@ -687,8 +687,10 @@ function renderAgenda(){
   if(!db.meses.length){ cont.innerHTML='<div class="empty"><div class="big">📅</div>Nenhum mês cadastrado.</div>'; return; }
   if(!funcById(dispFuncId)) dispFuncId=db.funcionarios[0].id;
   if(!mesById(mesAtualId)) mesAtualId=db.meses[0].id;
+  const _pw=cont.querySelector('.cal-wrap'); const _pt=_pw?_pw.scrollTop:0; const _pl=_pw?_pw.scrollLeft:0; const _wy=window.scrollY;
   cont.innerHTML=`<div id="agenda-box"></div>`;
   renderEscala('agenda-box');
+  const _nw=cont.querySelector('.cal-wrap'); if(_nw){ _nw.scrollTop=_pt; _nw.scrollLeft=_pl; } window.scrollTo(0,_wy);
 }
 function renderDisp(boxId){
   const box=document.getElementById(boxId); const mes=mesById(mesAtualId); const f=funcById(dispFuncId);
