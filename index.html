@@ -1045,10 +1045,15 @@ function renderRelatorios(){
   if(!mesById(mesRelId)) mesRelId=(mesById(mesAtualId)?mesAtualId:db.meses[0].id);
   const mes=mesById(mesRelId);
   const mesOpts=db.meses.map(m=>`<option value="${m.id}" ${m.id===mesRelId?'selected':''}>${esc(m.nome)}</option>`).join('');
-  const cards=db.funcionarios.map(f=>{ const h=horasFuncMes(mes,f.id); const dt=(mes.dias||[]).filter(d=>(+regDe(d,f.id).horas||0)>0).length;
+  const META=80;
+  const cards=db.funcionarios.map(f=>{ const h=horasFuncMes(mes,f.id); const dt=(mes.dias||[]).filter(d=>(+regDe(d,f.id).horas||0)>0).length; const restante=Math.max(0,META-h); const extra=Math.max(0,h-META);
     return `<div class="pay-card"><div class="nome"><span class="avatar" style="background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div>
       <div class="linha"><span>Dias trabalhados</span><b style="color:var(--text)">${dt}</b></div>
       <div class="linha"><span>Horas em ${esc(mes.nome)}</span><b style="color:var(--text)">${fmtHoras(h)}</b></div>
+      ${h<META
+        ? `<div class="linha"><span>Faltam para ${META}h</span><b style="color:var(--blue,#4f7cff)">${fmtHoras(restante)}</b></div>`
+        : `<div class="linha"><span>Meta de ${META}h</span><b style="color:var(--green)">✓ atingida</b></div>`}
+      ${extra>0 ? `<div class="linha"><span>Hora extra</span><b style="color:#f5b942">${fmtHoras(extra)}</b></div>` : ''}
       <div class="linha" style="margin-top:6px"><span>A receber</span><b class="total">${money(h*(+f.valorHora||0))}</b></div>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="gerarRelatorio('${mes.id}','${f.id}')">📄 Gerar PDF</button><button class="btn secondary" onclick="compartilharRelatorio('${mes.id}','${f.id}')">📤 Compartilhar</button></div></div>`;
   }).join('');
