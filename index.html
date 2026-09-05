@@ -332,7 +332,8 @@
   <div class="modal" style="max-width:480px">
     <h2>📝 Observação — <span id="obsTitulo" style="color:var(--accent)"></span></h2>
     <input type="hidden" id="obsDiaId">
-    <div class="field"><label>Descreva a atividade feita neste dia (aparece no relatório em PDF)</label>
+    <input type="hidden" id="obsFuncId">
+    <div class="field"><label>Descreva a atividade feita neste dia (aparece só no seu relatório em PDF)</label>
       <textarea id="obsTexto" rows="5" placeholder="Ex.: Gravei o culto, operei a mesa de som, editei o vídeo da transmissão..."></textarea>
     </div>
     <div class="modal-actions">
@@ -945,8 +946,8 @@ function cardPonto(d){
       return `<div class="pt-row"><div class="nm"><span class="avatar" style="width:20px;height:20px;font-size:10px;background:${corFunc(f.id)}">${esc(iniciais(f.nome))}</span>${esc(f.nome)}</div><input type="time" value="${esc(r.entrada||'')}" onchange="setPonto('${d.id}','${f.id}','entrada',this.value)"><input type="time" value="${esc(r.saida||'')}" onchange="setPonto('${d.id}','${f.id}','saida',this.value)"><span class="badge ${bateu?'green':'amber'} bd" id="bd-${d.id}-${f.id}">${bateu?fmtHoras(r.horas):'falta'}</span>${limpar}</div>`; }).filter(Boolean).join('');
     const vazio=`<div class="pt-row" style="color:var(--muted);justify-content:center;padding:10px 0">${(!ehAdmin()&&usuarioAtual)?'Você não está escalado neste dia':'Ninguém escalado neste dia'}</div>`;
     const p=(d.data||'--').split('-');
-    const temObs=d.obs&&d.obs.trim();
-    const obsBtn=`<div style="margin-top:auto;padding-top:8px"><button class="btn secondary" style="width:100%;font-size:12px;padding:7px" onclick="openObs('${d.id}')">📝 Observação${temObs?' ✓':''}</button>${temObs?`<div class="hint" style="margin:5px 0 0;font-size:11px;white-space:normal;line-height:1.35">🗒️ ${esc(d.obs.trim())}</div>`:''}</div>`;
+    const obsArea=ids.map(fid=>{ const f=funcById(fid); if(!f) return ''; const r=regDe(d,fid); const o=(r.obs||'').trim(); const rotulo=ids.length>1?esc((f.nome||'').split(/\s+/)[0]):'Observação'; return `<div style="margin-top:6px"><button class="btn secondary" style="width:100%;font-size:12px;padding:7px" onclick="openObs('${d.id}','${f.id}')">📝 ${rotulo}${o?' ✓':''}</button>${o?`<div class="hint" style="margin:5px 0 0;font-size:11px;white-space:normal;line-height:1.35">🗒️ ${esc(o)}</div>`:''}</div>`; }).filter(Boolean).join('');
+    const obsBtn=ids.length?`<div style="margin-top:auto;padding-top:2px">${obsArea}</div>`:'';
     return `<div class="card pt-card"><div class="pt-head"><div style="flex:1;min-width:0"><b style="font-size:14px">${esc(d.evento)||'Evento'}</b><div class="hint" style="margin:0">${p[2]||'?'}/${p[1]||'?'} · ${esc((d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3).toLowerCase())}</div></div><span class="badge" id="tot-${d.id}">${fmtHoras(horasDia(d))}</span></div><div class="pt-row pt-cab"><span>Equipe</span><span>Ent</span><span>Saí</span><span>Hrs</span><span></span></div>${rows||vazio}${obsBtn}</div>`;
 }
 function setPonto(diaId, fid, campo, val){
@@ -974,19 +975,25 @@ function limparPonto(diaId, fid){
   d.reg[fid]={entrada:'',saida:'',horas:0};
   save(); renderPonto();
 }
-function openObs(diaId){
+function openObs(diaId, funcId){
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
+  const f=funcId?funcById(funcId):null;
   document.getElementById('obsDiaId').value=d.id;
+  document.getElementById('obsFuncId').value=funcId||'';
   const p=(d.data||'--').split('-');
-  document.getElementById('obsTitulo').textContent=(d.evento||'Evento')+' · '+(p[2]||'?')+'/'+(p[1]||'?');
-  document.getElementById('obsTexto').value=d.obs||'';
+  document.getElementById('obsTitulo').textContent=((f&&f.nome)?f.nome+' · ':'')+(d.evento||'Evento')+' · '+(p[2]||'?')+'/'+(p[1]||'?');
+  const r=regDe(d,funcId);
+  document.getElementById('obsTexto').value=(r&&r.obs)||'';
   document.getElementById('overlayObs').classList.add('open');
   setTimeout(()=>document.getElementById('obsTexto').focus(),60);
 }
 function closeObs(){ document.getElementById('overlayObs').classList.remove('open'); }
 function salvarObs(){
-  const id=document.getElementById('obsDiaId').value; const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return;
-  d.obs=document.getElementById('obsTexto').value.trim();
+  const id=document.getElementById('obsDiaId').value; const fid=document.getElementById('obsFuncId').value;
+  const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return;
+  if(usuarioAtual && !ehAdmin() && fid!==usuarioAtual.funcId){ closeObs(); return; }
+  if(!d.reg) d.reg={}; if(!d.reg[fid]) d.reg[fid]={entrada:'',saida:'',horas:0};
+  d.reg[fid].obs=document.getElementById('obsTexto').value.trim();
   save(); closeObs(); renderPonto();
 }
 function openEvento(diaId){
@@ -1068,7 +1075,7 @@ function paginaRelatorio(doc, mes, f){
   doc.setFontSize(15); doc.setTextColor(0); doc.text(((db.config&&db.config.igreja)||'Primeira Igreja Batista de Niterói'), 14, 18);
   doc.setFontSize(11); doc.setTextColor(110); doc.text('Relatório de horas trabalhadas', 14, 25);
   doc.setTextColor(0); doc.setFontSize(13); doc.text(`${f.nome}  —  ${mes.nome}`, 14, 34);
-  const body=dias.map(d=>{ const r=regDe(d,funcId); const p=(d.data||'--').split('-'); return [ `${p[2]||'?'}/${p[1]||'?'}`, (d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3), d.evento||'', r.entrada||'-', r.saida||'-', fmtHoras(r.horas), d.obs||'' ]; });
+  const body=dias.map(d=>{ const r=regDe(d,funcId); const p=(d.data||'--').split('-'); return [ `${p[2]||'?'}/${p[1]||'?'}`, (d.diaSemana||diaSemanaPT(d.data)||'').slice(0,3), d.evento||'', r.entrada||'-', r.saida||'-', fmtHoras(r.horas), (r.obs||'') ]; });
   let totH=0; dias.forEach(d=>totH+=(+regDe(d,funcId).horas||0)); const valor=totH*(+f.valorHora||0);
   doc.autoTable({ startY:40, head:[['Data','Dia','Evento','Entrada','Saída','Horas','Observação']], body: body.length?body:[['—','—','sem registros neste mês','—','—','—','—']], styles:{fontSize:9,cellPadding:2.2}, headStyles:{fillColor:[79,124,255]}, columnStyles:{6:{cellWidth:42}} });
   let y=(doc.lastAutoTable?doc.lastAutoTable.finalY:50)+12;
