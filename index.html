@@ -1072,10 +1072,15 @@ function paginaRelatorio(doc, mes, f){
   let totH=0; dias.forEach(d=>totH+=(+regDe(d,funcId).horas||0)); const valor=totH*(+f.valorHora||0);
   doc.autoTable({ startY:40, head:[['Data','Dia','Evento','Entrada','Saída','Horas','Observação']], body: body.length?body:[['—','—','sem registros neste mês','—','—','—','—']], styles:{fontSize:9,cellPadding:2.2}, headStyles:{fillColor:[79,124,255]}, columnStyles:{6:{cellWidth:42}} });
   let y=(doc.lastAutoTable?doc.lastAutoTable.finalY:50)+12;
+  const META=80; const restante=Math.max(0,META-totH); const extra=Math.max(0,totH-META);
   doc.setFontSize(12); doc.setTextColor(0);
-  doc.text(`Total de horas trabalhadas: ${fmtHoras(totH)}`, 14, y);
-  doc.text(`Valor por hora: ${money(f.valorHora)}`, 14, y+7);
-  doc.setTextColor(20,120,70); doc.setFontSize(13); doc.text(`Total a receber: ${money(valor)}`, 14, y+15);
+  let yy=y;
+  doc.text(`Total de horas trabalhadas: ${fmtHoras(totH)}`, 14, yy); yy+=7;
+  doc.text(`Valor por hora: ${money(f.valorHora)}`, 14, yy); yy+=7;
+  if(totH<META){ doc.text(`Faltam para ${META}h: ${fmtHoras(restante)}`, 14, yy); yy+=7; }
+  else { doc.setTextColor(20,120,70); doc.text(`Meta de ${META}h atingida`, 14, yy); doc.setTextColor(0); yy+=7; }
+  if(extra>0){ doc.setTextColor(200,140,20); doc.text(`Hora extra: ${fmtHoras(extra)}`, 14, yy); doc.setTextColor(0); yy+=7; }
+  doc.setTextColor(20,120,70); doc.setFontSize(13); doc.text(`Total a receber: ${money(valor)}`, 14, yy+3);
   doc.setTextColor(150); doc.setFontSize(8.5); doc.text(`Gerado em ${dataExtenso()}`, 14, 287);
   return { totH, valor };
 }
