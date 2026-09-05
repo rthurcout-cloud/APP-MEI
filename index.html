@@ -303,6 +303,7 @@
     <input type="hidden" id="fId">
     <div class="field"><label>Nome</label><input type="text" id="fNome" placeholder="Nome do funcionário"></div>
     <div class="field"><label>Valor por hora (R$)</label><input type="number" id="fValor" step="0.01" min="0" placeholder="35"></div>
+    <div class="field"><label>Pix (chave para pagamento)</label><input type="text" id="fPix" placeholder="CPF, telefone, e-mail ou chave aleatória"></div>
     <div class="modal-actions">
       <button class="btn danger" id="btnExcluirFunc" onclick="excluirFunc()" style="margin-right:auto; display:none">Excluir</button>
       <button class="btn secondary" onclick="closeFunc()">Cancelar</button>
@@ -463,6 +464,8 @@ function uid(p){ return (p||'id')+Date.now().toString(36)+Math.floor(Math.random
 /* ---------- Login e usuários ---------- */
 let usuarioAtual=null;
 function ehAdmin(){ return !!(usuarioAtual && usuarioAtual.papel==='admin'); }
+function ehArthur(){ return !!(usuarioAtual && /(^|\s)arthur\b/i.test(usuarioAtual.nome||'')); }
+function podeFuncionarios(){ return ehAdmin() || ehArthur(); }
 function seedUsuarios(){
   if(!Array.isArray(db.usuarios)) db.usuarios=[];
   if(db.usuarios.length) return false;
@@ -486,7 +489,7 @@ function fazerLogin(){
 function logout(){ usuarioAtual=null; localStorage.removeItem('bh-user'); popularLoginUsers(); document.getElementById('loginSenha').value=''; document.getElementById('overlayLogin').style.display='flex'; fecharMenu(); }
 function aplicarPermissoes(){
   const admin=ehAdmin();
-  document.querySelectorAll('.nav-item').forEach(it=>{ const v=it.dataset.view; if(!v) return; let show; if(admin){ show=(v!=='minhas'); } else { show=(v==='agenda'||v==='minhas'||v==='ponto'); } it.style.display=show?'':'none'; });
+  document.querySelectorAll('.nav-item').forEach(it=>{ const v=it.dataset.view; if(!v) return; let show; if(admin){ show=(v!=='minhas'); } else { show=(v==='agenda'||v==='minhas'||v==='ponto')||(v==='funcionarios'&&ehArthur()); } it.style.display=show?'':'none'; });
   if(usuarioAtual){ const un=document.getElementById('userNome'); if(un) un.textContent=usuarioAtual.nome; const uc=document.getElementById('userCargo'); if(uc) uc.textContent=admin?'Administrador':'Funcionário'; const ua=document.getElementById('userAv'); if(ua) ua.textContent=iniciais(usuarioAtual.nome); }
 }
 
@@ -517,7 +520,7 @@ const PAGES=['dashboard','agenda','funcionarios','ponto','confirmacoes','banco',
 const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Toque no nome para escalar (verde) ou marcar que não pode (vermelho).'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Defina o cargo de cada funcionário.'], config:['Configurações','Ajustes do sistema.'], minhas:['Minhas horas','Suas horas e valor a receber.'] };
 let viewAtual='dashboard';
 function navegar(v){
-  if(usuarioAtual && !ehAdmin() && !['agenda','minhas','ponto'].includes(v)) v='agenda';
+  if(usuarioAtual && !ehAdmin()){ const permitidas=['agenda','minhas','ponto']; if(ehArthur()) permitidas.push('funcionarios'); if(!permitidas.includes(v)) v='agenda'; }
   if(!TITULOS[v]) v='agenda';
   viewAtual=v;
   PAGES.forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display=(p===v)?'':'none'; });
@@ -788,10 +791,10 @@ function salvarEscala(){
 }
 
 /* ---------- Funcionários ---------- */
-function openFunc(id){ let f=null; if(id) f=funcById(id); document.getElementById('funcTitulo').textContent=f?'Editar funcionário':'Novo funcionário'; document.getElementById('fId').value=f?f.id:''; document.getElementById('fNome').value=f?f.nome:''; document.getElementById('fValor').value=f?f.valorHora:''; document.getElementById('btnExcluirFunc').style.display=f?'':'none'; document.getElementById('overlayFunc').classList.add('open'); setTimeout(()=>document.getElementById('fNome').focus(),50); }
+function openFunc(id){ let f=null; if(id) f=funcById(id); document.getElementById('funcTitulo').textContent=f?'Editar funcionário':'Novo funcionário'; document.getElementById('fId').value=f?f.id:''; document.getElementById('fNome').value=f?f.nome:''; document.getElementById('fValor').value=f?f.valorHora:''; document.getElementById('fPix').value=(f&&f.pix)?f.pix:''; document.getElementById('btnExcluirFunc').style.display=f?'':'none'; document.getElementById('overlayFunc').classList.add('open'); setTimeout(()=>document.getElementById('fNome').focus(),50); }
 function closeFunc(){ document.getElementById('overlayFunc').classList.remove('open'); }
 document.getElementById('overlayFunc').addEventListener('click',e=>{ if(e.target.id==='overlayFunc') closeFunc(); });
-function salvarFunc(){ const nome=document.getElementById('fNome').value.trim(); if(!nome){ alert('Digite o nome.'); return; } const valor=parseFloat(document.getElementById('fValor').value)||0; const id=document.getElementById('fId').value; if(id){ const f=funcById(id); f.nome=nome; f.valorHora=valor; } else { db.funcionarios.push({ id:uid('f'), nome, valorHora:valor }); } save(); closeFunc(); renderAtual(); }
+function salvarFunc(){ const nome=document.getElementById('fNome').value.trim(); if(!nome){ alert('Digite o nome.'); return; } const valor=parseFloat(document.getElementById('fValor').value)||0; const pix=document.getElementById('fPix').value.trim(); const id=document.getElementById('fId').value; if(id){ const f=funcById(id); f.nome=nome; f.valorHora=valor; f.pix=pix; } else { db.funcionarios.push({ id:uid('f'), nome, valorHora:valor, pix }); } save(); closeFunc(); renderAtual(); }
 function excluirFunc(){ const id=document.getElementById('fId').value; if(!confirm('Excluir este funcionário?')) return; db.funcionarios=db.funcionarios.filter(f=>f.id!==id); save(); closeFunc(); renderAtual(); }
 function renderFuncionarios(){
   const el=document.getElementById('lista-funcionarios');
@@ -804,6 +807,7 @@ function renderFuncionarios(){
       <div class="linha"><span>Horas em ${esc(nomeMes)}</span><b style="color:var(--text)">${fmtHoras(hMes)}</b></div>
       <div class="linha"><span>Horas no ano</span><b style="color:var(--text)">${fmtHoras(hAno)}</b></div>
       <div class="linha" style="margin-top:6px"><span>A pagar</span><b class="total">${money(pagar)}</b></div>
+      ${f.pix?`<div class="linha"><span>Pix</span><b style="color:var(--text);word-break:break-all;text-align:right">${esc(f.pix)}</b></div>`:''}
       <div style="margin-top:12px"><button class="btn secondary small" onclick="openFunc('${f.id}')">Editar</button></div></div>`;
   }).join('')+'</div>';
 }
