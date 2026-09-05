@@ -464,8 +464,9 @@ function uid(p){ return (p||'id')+Date.now().toString(36)+Math.floor(Math.random
 /* ---------- Login e usuários ---------- */
 let usuarioAtual=null;
 function ehAdmin(){ return !!(usuarioAtual && usuarioAtual.papel==='admin'); }
-function ehArthur(){ return !!(usuarioAtual && /(^|\s)arthur\b/i.test(usuarioAtual.nome||'')); }
-function podeFuncionarios(){ return ehAdmin() || ehArthur(); }
+function ehArthur(){ return !!(usuarioAtual && (usuarioAtual.funcId==='arthur' || /(^|\s)arthur\b/i.test(usuarioAtual.nome||''))); }
+// Página Funcionários (pagamento/Pix): só a conta Administrador e o Arthur — mesmo que outros sejam admin
+function podeFuncionarios(){ return !!(usuarioAtual && (usuarioAtual.id==='admin' || ehArthur())); }
 function seedUsuarios(){
   if(!Array.isArray(db.usuarios)) db.usuarios=[];
   if(db.usuarios.length) return false;
@@ -489,7 +490,7 @@ function fazerLogin(){
 function logout(){ usuarioAtual=null; localStorage.removeItem('bh-user'); popularLoginUsers(); document.getElementById('loginSenha').value=''; document.getElementById('overlayLogin').style.display='flex'; fecharMenu(); }
 function aplicarPermissoes(){
   const admin=ehAdmin();
-  document.querySelectorAll('.nav-item').forEach(it=>{ const v=it.dataset.view; if(!v) return; let show; if(admin){ show=(v!=='minhas'); } else { show=(v==='agenda'||v==='minhas'||v==='ponto')||(v==='funcionarios'&&ehArthur()); } it.style.display=show?'':'none'; });
+  document.querySelectorAll('.nav-item').forEach(it=>{ const v=it.dataset.view; if(!v) return; let show; if(v==='funcionarios'){ show=podeFuncionarios(); } else if(admin){ show=(v!=='minhas'); } else { show=(v==='agenda'||v==='minhas'||v==='ponto'); } it.style.display=show?'':'none'; });
   if(usuarioAtual){ const un=document.getElementById('userNome'); if(un) un.textContent=usuarioAtual.nome; const uc=document.getElementById('userCargo'); if(uc) uc.textContent=admin?'Administrador':'Funcionário'; const ua=document.getElementById('userAv'); if(ua) ua.textContent=iniciais(usuarioAtual.nome); }
 }
 
@@ -520,7 +521,7 @@ const PAGES=['dashboard','agenda','funcionarios','ponto','confirmacoes','banco',
 const TITULOS={ dashboard:['Dashboard','Aqui está o resumo de hoje e da equipe.'], agenda:['Agenda / Escala','Toque no nome para escalar (verde) ou marcar que não pode (vermelho).'], funcionarios:['Funcionários','Cadastro, valor/hora e pagamento.'], ponto:['Ponto','Registro de presença (bater ponto).'], confirmacoes:['Confirmações','Confirmação de presença nos eventos.'], banco:['Banco de Horas','Preencha as horas trabalhadas por dia.'], financeiro:['Financeiro','Resumo de pagamento por funcionário.'], relatorios:['Relatórios','Relatórios e exportações.'], funcoes:['Funções','Defina o cargo de cada funcionário.'], config:['Configurações','Ajustes do sistema.'], minhas:['Minhas horas','Suas horas e valor a receber.'] };
 let viewAtual='dashboard';
 function navegar(v){
-  if(usuarioAtual && !ehAdmin()){ const permitidas=['agenda','minhas','ponto']; if(ehArthur()) permitidas.push('funcionarios'); if(!permitidas.includes(v)) v='agenda'; }
+  if(usuarioAtual){ if(v==='funcionarios' && !podeFuncionarios()){ v=ehAdmin()?'dashboard':'agenda'; } else if(!ehAdmin() && !['agenda','minhas','ponto'].includes(v)){ v='agenda'; } }
   if(!TITULOS[v]) v='agenda';
   viewAtual=v;
   PAGES.forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display=(p===v)?'':'none'; });
@@ -616,7 +617,7 @@ function renderDashboard(){
       <div class="panel"><h3>Atalhos</h3>
         <div class="ev-row" style="cursor:pointer" onclick="navegar('banco')"><span style="font-size:20px">📊</span><div style="flex:1"><b>Preencher horas</b><div class="sub2" style="color:var(--muted)">Lançar horas do mês</div></div>→</div>
         <div class="ev-row" style="cursor:pointer" onclick="navegar('agenda')"><span style="font-size:20px">🗓️</span><div style="flex:1"><b>Marcar disponibilidade</b><div class="sub2" style="color:var(--muted)">Dias que cada um pode trabalhar</div></div>→</div>
-        <div class="ev-row" style="cursor:pointer" onclick="navegar('funcionarios')"><span style="font-size:20px">👥</span><div style="flex:1"><b>Funcionários</b><div class="sub2" style="color:var(--muted)">Cadastro e pagamento</div></div>→</div>
+        ${podeFuncionarios()?`<div class="ev-row" style="cursor:pointer" onclick="navegar('funcionarios')"><span style="font-size:20px">👥</span><div style="flex:1"><b>Funcionários</b><div class="sub2" style="color:var(--muted)">Cadastro e pagamento</div></div>→</div>`:''}
       </div>
     </div>`;
 }
