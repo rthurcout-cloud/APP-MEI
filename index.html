@@ -354,6 +354,81 @@
     .ht-ic, .ht-ic svg { width:38px; height:38px; }
   }
   @media (prefers-reduced-motion:reduce){ .core-rings i, .core-ring, .hl-flow, .core-beam { animation:none !important; } .hub-board { transform:none !important; } }
+
+  /* ===== Visual do Dashboard em todas as páginas e no menu (28/09/2026) ===== */
+  /* títulos das páginas */
+  .page-head { position:relative; align-items:center; padding-bottom:16px; }
+  .page-head::after { content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
+    background:linear-gradient(90deg, rgba(34,211,238,.75), rgba(34,211,238,.15) 45%, transparent); }
+  .page-head::before { content:''; position:absolute; left:0; bottom:-3px; width:7px; height:7px; border-radius:99px; background:var(--accent); box-shadow:0 0 10px 2px rgba(34,211,238,.8); }
+  .page-ic { width:52px; height:52px; flex:0 0 52px; border-radius:16px; display:flex; align-items:center; justify-content:center; color:var(--accent);
+    border:1px solid rgba(125,240,255,.6); background:radial-gradient(circle at 50% 40%, rgba(34,211,238,.25), rgba(8,20,44,.95) 70%);
+    box-shadow:0 0 26px -6px rgba(34,211,238,.85), inset 0 0 14px rgba(34,211,238,.25); }
+  .page-ic svg { width:26px; height:26px; filter:drop-shadow(0 0 6px rgba(34,211,238,.8)); }
+  .page-ic:empty { display:none; }
+  /* entrada das páginas em 3D */
+  .page { perspective:1400px; }
+  .page.entrando > * { animation:entrar3d .5s cubic-bezier(.32,.72,0,1) both; }
+  .page.entrando > *:nth-child(2) { animation-delay:.05s; } .page.entrando > *:nth-child(3) { animation-delay:.1s; } .page.entrando > *:nth-child(4) { animation-delay:.15s; }
+  @keyframes entrar3d { from { opacity:0; transform:translateY(16px) rotateX(7deg); } to { opacity:1; transform:none; } }
+  /* painéis no mesmo estilo dos cards do Dashboard */
+  .panel, .card, .pay-card, .modal, .tbl-wrap { position:relative;
+    background:linear-gradient(160deg, rgba(20,44,88,.92), rgba(8,20,44,.94)); border:1px solid rgba(34,211,238,.35); border-radius:18px;
+    box-shadow:0 0 0 1px rgba(34,211,238,.05) inset, 0 14px 30px -18px rgba(0,0,0,.9), 0 0 22px -12px rgba(34,211,238,.8); }
+  .panel::before, .card::before, .pay-card::before, .modal::before { content:''; position:absolute; left:14px; right:14px; top:0; height:1px; pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(125,240,255,.85),transparent); }
+  .pay-card, .pd-item, .escala-grid .card, .ponto-grid .card, .ponto-um .card { transition:transform .22s cubic-bezier(.32,.72,0,1), box-shadow .22s, border-color .22s; }
+  .pay-card:hover, .escala-grid .card:hover, .ponto-grid .card:hover, .ponto-um .card:hover { transform:translateY(-3px); border-color:rgba(125,240,255,.7);
+    box-shadow:0 0 0 1px rgba(125,240,255,.2) inset, 0 24px 40px -20px rgba(0,0,0,.95), 0 0 30px -8px rgba(34,211,238,.9); }
+  .mini { background:linear-gradient(160deg, rgba(20,44,88,.85), rgba(8,20,44,.9)); border:1px solid rgba(34,211,238,.28); box-shadow:0 0 18px -12px rgba(34,211,238,.8); }
+  .mini .n { color:#E6F1FF; }
+  .section-label { color:var(--accent); letter-spacing:1.2px; display:flex; align-items:center; gap:8px; }
+  .section-label::before { content:''; width:14px; height:2px; border-radius:2px; background:var(--accent); box-shadow:0 0 8px rgba(34,211,238,.9); }
+  .ev-row { border-top-color:rgba(34,211,238,.15); }
+  .ev-row[onclick] { border-radius:12px; padding-left:8px; padding-right:8px; transition:background .18s; }
+  .ev-row[onclick]:hover { background:rgba(34,211,238,.08); }
+  /* escala: botões de pessoa em neon */
+  .esc-btn { border-radius:12px; border-color:rgba(34,211,238,.28); background:rgba(8,22,49,.8); }
+  .esc-btn:hover { border-color:rgba(125,240,255,.7); box-shadow:0 0 16px -6px rgba(34,211,238,.9); }
+  .esc-btn.on { box-shadow:0 0 16px -6px rgba(52,211,153,.9); }
+  .esc-btn.no { box-shadow:0 0 16px -6px rgba(248,113,113,.9); }
+  .cal-cel { background:linear-gradient(160deg, rgba(20,44,88,.8), rgba(8,20,44,.85)); border-color:rgba(34,211,238,.22); border-radius:14px; }
+  .cal-cel:hover { border-color:rgba(125,240,255,.55); }
+  .cal-cell { border-color:rgba(34,211,238,.25); background:rgba(11,26,54,.8); border-radius:12px; }
+  .cal-cell.on { box-shadow:0 0 14px -6px rgba(52,211,153,.9); }
+  .pd-item { background:rgba(11,26,54,.7); border-color:rgba(34,211,238,.25); }
+  .pd-item:hover { transform:translateX(3px); border-color:rgba(125,240,255,.6); }
+  /* tabelas */
+  .tbl-wrap { padding:0; overflow:auto; }
+  table.planilha thead th { background:rgba(16,36,74,.95); color:#CFE8FF; border-bottom:1px solid rgba(34,211,238,.5); letter-spacing:.4px; }
+  table.planilha td { border-bottom-color:rgba(34,211,238,.12); }
+  table.planilha tbody tr:hover td { background:rgba(34,211,238,.06); }
+  .seg { background:rgba(8,22,49,.85); border-color:rgba(34,211,238,.3); }
+  .seg button.on { box-shadow:0 0 16px -6px rgba(34,211,238,.9); }
+  /* botões com luz no topo */
+  .btn { position:relative; overflow:hidden; }
+  .btn::before { content:''; position:absolute; left:10%; right:10%; top:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent); opacity:.7; pointer-events:none; }
+  .btn.secondary::before { background:linear-gradient(90deg,transparent,rgba(125,240,255,.8),transparent); }
+  .btn:hover { transform:translateY(-1px); }
+  .btn.secondary:hover { box-shadow:0 0 18px -8px rgba(34,211,238,.9); }
+  /* menu lateral: cada botão vira um mini painel */
+  .nav-item { border:1px solid transparent; transition:background .18s, border-color .18s, transform .18s, box-shadow .18s; }
+  .sidebar .nav-item .ic { width:32px; height:32px; flex:0 0 32px; border-radius:10px; align-items:center; justify-content:center;
+    border:1px solid rgba(34,211,238,.28); background:rgba(34,211,238,.06); color:var(--accent); transition:background .18s, box-shadow .18s, color .18s; }
+  .sidebar .nav-item .ic svg { width:18px; height:18px; }
+  .sidebar .nav-item:hover { background:linear-gradient(160deg, rgba(20,44,88,.75), rgba(8,20,44,.75)); border-color:rgba(34,211,238,.35); transform:translateX(3px); color:var(--text); }
+  .sidebar .nav-item:hover .ic { box-shadow:0 0 14px -4px rgba(34,211,238,.9); }
+  .sidebar .nav-item.active { background:linear-gradient(160deg, rgba(20,44,88,.95), rgba(8,20,44,.95)); border-color:rgba(125,240,255,.6); color:#fff; box-shadow:0 0 24px -10px rgba(34,211,238,.95); }
+  .sidebar .nav-item.active .ic { background:var(--accent); color:var(--ink); border-color:rgba(125,240,255,.9); box-shadow:0 0 16px -2px rgba(34,211,238,.9); }
+  .sidebar .nav-section { display:flex; align-items:center; gap:8px; }
+  .sidebar .nav-section::after { content:''; flex:1; height:1px; margin-right:12px; background:linear-gradient(90deg, rgba(34,211,238,.4), transparent); }
+  /* menu de baixo (celular) */
+  @media (max-width:900px){
+    .bnav .nav-item.active .ic { filter:drop-shadow(0 0 6px rgba(34,211,238,.9)); }
+    .page-ic { width:44px; height:44px; flex-basis:44px; border-radius:14px; }
+    .page-ic svg { width:22px; height:22px; }
+  }
+  @media (prefers-reduced-motion:reduce){ .page.entrando > * { animation:none !important; } .sidebar .nav-item:hover, .pd-item:hover, .btn:hover { transform:none; } }
 </style>
 </head>
 <body>
@@ -392,6 +467,7 @@
     </div>
     <div class="page-wrap">
       <div class="page-head">
+        <span class="page-ic" id="pageIcon" aria-hidden="true"></span>
         <div>
           <h1 id="pageTitulo">Dashboard</h1>
           <div class="sub" id="pageSub">Aqui está o resumo de hoje e da equipe.</div>
@@ -707,6 +783,8 @@ function navegar(v){
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
   document.getElementById('pageTitulo').textContent=TITULOS[v][0];
   document.getElementById('pageSub').textContent=TITULOS[v][1];
+  { const ni=document.querySelector('.sidebar .nav-item[data-view="'+v+'"] .ic'); const pi=document.getElementById('pageIcon'); if(pi) pi.innerHTML=ni?ni.innerHTML:''; }
+  { const pg=document.getElementById('page-'+v); if(pg){ pg.classList.remove('entrando'); void pg.offsetWidth; pg.classList.add('entrando'); } }
   renderAtual();
   fecharMenu();
   window.scrollTo(0,0);
