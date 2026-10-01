@@ -42,6 +42,25 @@ module.exports = async (req, res) => {
         config: (body.config && typeof body.config === 'object') ? body.config : {},
         usuarios: Array.isArray(body.usuarios) ? body.usuarios : []
       };
+      // Ponto: cada lançamento tem um carimbo de hora (t). Se dois aparelhos salvam juntos, fica o mais
+      // recente de cada pessoa em cada dia, em vez de um aparelho apagar o que o outro acabou de lançar.
+      try {
+        const atual = await kv(['GET', DATA_KEY]);
+        const velho = atual && atual.result ? JSON.parse(atual.result) : null;
+        if (velho && Array.isArray(velho.meses)) {
+          const diasVelhos = {};
+          velho.meses.forEach(m => (m.dias || []).forEach(d => { diasVelhos[d.id] = d; }));
+          safe.meses.forEach(m => (m.dias || []).forEach(d => {
+            const v = diasVelhos[d.id];
+            if (!v || !v.reg) return;
+            d.reg = d.reg || {};
+            Object.keys(v.reg).forEach(fid => {
+              const rv = v.reg[fid] || {}, rn = d.reg[fid];
+              if (!rn || (+rv.t || 0) > (+rn.t || 0)) d.reg[fid] = rv;
+            });
+          }));
+        }
+      } catch (e) { /* se não conseguir ler o banco, salva como veio */ }
       await kv(['SET', DATA_KEY, JSON.stringify(safe)]);
       res.status(200).json({ ok: true });
       return;

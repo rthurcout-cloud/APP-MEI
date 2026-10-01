@@ -1183,7 +1183,7 @@ function renderPonto(){
   const temHoje = dias.some(x=>x.data===hoje);
   const btnHoje = (escolhido && temHoje) ? `<button class="btn secondary" onclick="pontoHoje()">↩️ Voltar para hoje</button>` : '';
   const topo = `<div class="toolbar"><select onchange="setMes(this.value)">${mesOpts}</select><button class="btn secondary" onclick="openPontoDias()">📅 Escolher outro dia</button>${btnHoje}</div>`;
-  const dica = `<div class="hint" style="margin-bottom:12px">Mostrando <b>${escolhido?'o dia escolhido':'o dia de hoje'}</b> — use <b>📅 Escolher outro dia</b> para preencher outra data. Aparecem só as pessoas <b>escaladas</b> (definidas na Escala); preencha <b>entrada</b> e <b>saída</b> que as horas vão para o Banco de Horas.</div>`;
+  const dica = `<div class="hint" style="margin-bottom:12px">Mostrando <b>${escolhido?'o dia escolhido':'o dia de hoje'}</b> — use <b>📅 Escolher outro dia</b> para preencher outra data. ${ehAdmin()?'Aparecem as pessoas <b>escaladas</b> (definidas na Escala) e quem já lançou hora':'Você pode lançar a sua hora em <b>qualquer dia</b>, mesmo fora da escala'}; preencha <b>entrada</b> e <b>saída</b> que as horas vão para o Banco de Horas.</div>`;
   let corpo;
   if(!dias.length) corpo='<div class="empty"><div class="big">🗓️</div>Nenhum dia neste mês.</div>';
   else if(!mostrar.length) corpo=`<div class="empty"><div class="big">🗓️</div>Não há evento cadastrado para hoje (${hoje.split('-').reverse().join('/')}).<br>Toque em <b>📅 Escolher outro dia</b> para preencher outra data.</div>`;
@@ -1223,7 +1223,8 @@ function cardPonto(d){
     const escIds=(d.escala||[]).map(a=>a.funcId);
     const regIds=Object.keys(d.reg||{}).filter(k=>{const r=d.reg[k]; return r&&(r.entrada||r.saida||(+r.horas>0));});
     let ids=[...new Set([...escIds,...regIds])];
-    if(!ehAdmin()&&usuarioAtual&&usuarioAtual.funcId) ids=ids.filter(i=>i===usuarioAtual.funcId);
+    // funcionário vê sempre a própria linha, mesmo fora da escala (pra lançar hora em qualquer dia)
+    if(!ehAdmin()&&usuarioAtual&&usuarioAtual.funcId) ids=[usuarioAtual.funcId];
     const podeEditar = fid=> ehAdmin() || (usuarioAtual && usuarioAtual.funcId===fid);
     const rows=ids.map(fid=>{ const f=funcById(fid); if(!f) return ''; const r=regDe(d,fid); const bateu=r.entrada&&r.saida;
       const temHora = r.entrada||r.saida||(+r.horas>0);
@@ -1240,7 +1241,7 @@ function setPonto(diaId, fid, campo, val){
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d) return;
   if(!d.reg) d.reg={}; if(!d.reg[fid]) d.reg[fid]={entrada:'',saida:'',horas:0};
   d.reg[fid][campo]=val;
-  const r=d.reg[fid];
+  const r=d.reg[fid]; r.t=Date.now();
   // se faltar entrada OU saída, zera as horas; senão recalcula
   if(!r.entrada || !r.saida){ r.horas=0; }
   else { const h=horasEntre(r.entrada,r.saida); if(h!=null) r.horas=h; }
@@ -1257,7 +1258,7 @@ function limparPonto(diaId, fid){
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===diaId); if(!d||!d.reg||!d.reg[fid]) return;
   const f=funcById(fid);
   if(!confirm('Apagar os horários de '+((f&&f.nome)||'')+' neste dia?')) return;
-  d.reg[fid]={entrada:'',saida:'',horas:0};
+  d.reg[fid]={entrada:'',saida:'',horas:0,t:Date.now()};
   save(); renderPonto();
 }
 function openObs(diaId, funcId){
@@ -1278,7 +1279,7 @@ function salvarObs(){
   const mes=mesById(mesAtualId); const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return;
   if(usuarioAtual && !ehAdmin() && fid!==usuarioAtual.funcId){ closeObs(); return; }
   if(!d.reg) d.reg={}; if(!d.reg[fid]) d.reg[fid]={entrada:'',saida:'',horas:0};
-  d.reg[fid].obs=document.getElementById('obsTexto').value.trim();
+  d.reg[fid].obs=document.getElementById('obsTexto').value.trim(); d.reg[fid].t=Date.now();
   save(); closeObs(); renderPonto();
 }
 function openEvento(diaId){
