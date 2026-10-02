@@ -42,6 +42,12 @@ module.exports = async (req, res) => {
         config: (body.config && typeof body.config === 'object') ? body.config : {},
         usuarios: Array.isArray(body.usuarios) ? body.usuarios : []
       };
+      // Trava: nunca deixa um envio vazio apagar o banco (aparelho com defeito ou envio por engano).
+      if (!safe.funcionarios.length && !safe.meses.length) {
+        const atual0 = await kv(['GET', DATA_KEY]);
+        const v0 = atual0 && atual0.result ? JSON.parse(atual0.result) : null;
+        if (v0 && ((v0.funcionarios || []).length || (v0.meses || []).length)) { res.status(409).json({ error: 'envio_vazio_recusado' }); return; }
+      }
       // Ponto: cada lançamento tem um carimbo de hora (t). Se dois aparelhos salvam juntos, fica o mais
       // recente de cada pessoa em cada dia, em vez de um aparelho apagar o que o outro acabou de lançar.
       try {
