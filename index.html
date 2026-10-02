@@ -965,6 +965,9 @@ function salvarDia(){
   const mes=mesById(mesAtualId); if(!mes) return; const data=document.getElementById('dData').value; if(!data){ alert('Escolha a data.'); return; }
   const reg={};
   db.funcionarios.forEach(f=>{ const entrada=document.getElementById('ent-'+f.id).value; const saida=document.getElementById('sai-'+f.id).value; let horas=parseFloat(document.getElementById('hor-'+f.id).value); if(isNaN(horas)){ const h=horasEntre(entrada,saida); horas=h!=null?h:0; } reg[f.id]={entrada,saida,horas:Math.round(horas*10000)/10000}; });
+  // mantém observação e carimbo de quem não mudou; quem mudou ganha carimbo novo (o servidor fica com o mais recente)
+  { const idA=document.getElementById('dId').value; const dA=idA?(mes.dias||[]).find(x=>x.id===idA):null; const ant=(dA&&dA.reg)||{};
+    Object.keys(reg).forEach(fid=>{ const a=ant[fid]||{}; const r=reg[fid]; if(a.obs) r.obs=a.obs; const mudou=(a.entrada||'')!==r.entrada||(a.saida||'')!==r.saida||Math.abs((+a.horas||0)-r.horas)>0.0001; if(mudou) r.t=Date.now(); else if(a.t) r.t=a.t; }); }
   const obj={ data, diaSemana:diaSemanaPT(data), evento:document.getElementById('dEvento').value.trim(), obs:document.getElementById('dObs').value.trim(), reg };
   const id=document.getElementById('dId').value; if(!mes.dias) mes.dias=[];
   if(id){ const d=mes.dias.find(x=>x.id===id); Object.assign(d,obj); } else { obj.id=uid('d'); mes.dias.push(obj); }
