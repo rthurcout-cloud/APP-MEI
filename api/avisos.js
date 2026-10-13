@@ -2,6 +2,7 @@
 //   tipo=agenda    todo dia 1º: avisa TODOS os funcionários inscritos pra preencherem a agenda do mês
 //   tipo=lembrete  todo dia: avisa quem está ESCALADO em evento do dia seguinte (evento, data, hora se houver, e a função)
 // Chamada:  GET/POST /api/avisos?tipo=agenda|lembrete   [&data=AAAA-MM-DD  (simula "hoje")]  [&dry=1  (só mostra, não envia nada)]
+//           [&teste=1&so=<id do funcionário>]  manda a mensagem de verdade, mas SÓ pra essa pessoa, com "TESTE ·" no título e sem marcar como enviado
 // Autorização: o cron manda "Authorization: Bearer <CRON_SECRET>"; à mão use o header x-webhook-secret: <WEBHOOK_SECRET>.
 // Este arquivo NUNCA grava na chave dos dados do app.
 const crypto = require('crypto');
@@ -32,7 +33,8 @@ module.exports = async (req, res) => {
   if (!autorizado(req)) { res.status(401).json({ error: 'nao_autorizado' }); return; }
   if (!KV_URL || !KV_TOKEN) { res.status(500).json({ error: 'banco_nao_configurado' }); return; }
   const q = new URL(req.url, 'http://x').searchParams;
-  const tipo = q.get('tipo'), dry = q.get('dry') === '1';
+  const tipo = q.get('tipo'), dry = q.get('dry') === '1', teste = q.get('teste') === '1', so = q.get('so') || '';
+  if (teste && !so) { res.status(400).json({ error: 'teste_precisa_de_so_com_o_id_do_funcionario' }); return; }
   if (tipo !== 'agenda' && tipo !== 'lembrete') { res.status(400).json({ error: 'tipo_deve_ser_agenda_ou_lembrete' }); return; }
   const dataParam = q.get('data');
   if (dataParam && !/^\d{4}-\d{2}-\d{2}$/.test(dataParam)) { res.status(400).json({ error: 'data_invalida' }); return; }
@@ -65,6 +67,7 @@ module.exports = async (req, res) => {
         }
       }
     }
+    if (teste) { for (let i = msgs.length - 1; i >= 0; i--) { if (msgs[i].funcId !== so) msgs.splice(i, 1); else msgs[i].title = 'TESTE · ' + msgs[i].title; } }
     const comAparelho = new Set(inscritos.map(s => s.funcId));
     const plano = msgs.map(m => ({ para: (porId[m.funcId] || {}).nome || m.funcId, aparelhos: inscritos.filter(s => s.funcId === m.funcId).length, titulo: m.title, texto: m.body }));
     if (dry) { res.status(200).json({ ok: true, dry: true, tipo, hoje, ...info, mensagens: plano, semAparelho: msgs.filter(m => !comAparelho.has(m.funcId)).map(m => (porId[m.funcId] || {}).nome) }); return; }
@@ -78,18 +81,18 @@ module.exports = async (req, res) => {
     for (const m of msgs) {
       const aparelhos = inscritos.filter(s => s.funcId === m.funcId);
       if (!aparelhos.length) { semAparelho.push((porId[m.funcId] || {}).nome || m.funcId); continue; }
-      if ((await kv(['GET', KEYS.dedupe + m.chave])).result) { repetidos++; continue; }          // já mandei: não manda duas vezes a mesma coisa
+      if (!teste && (await kv(['GET', KEYS.dedupe + m.chave])).result) { repetidos++; continue; }          // já mandei: não manda duas vezes a mesma coisa
       const payload = JSON.stringify({ title: m.title, body: m.body, url: m.url, tag: m.tag });
       let deu = 0;
       await Promise.all(aparelhos.map(async s => {
         try { await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, payload, { TTL: 86400 }); enviados++; deu++; }
         catch (e) { if (e && (e.statusCode === 404 || e.statusCode === 410)) { removidos++; await kv(['HDEL', KEYS.push, s.endpoint]).catch(() => {}); } else falhas++; }
       }));
-      if (deu) await kv(['SET', KEYS.dedupe + m.chave, '1', 'EX', String(tipo === 'agenda' ? 40 * 86400 : 2 * 86400)]);   // só marca como enviado se pelo menos um aparelho recebeu
+      if (deu && !teste) await kv(['SET', KEYS.dedupe + m.chave, '1', 'EX', String(tipo === 'agenda' ? 40 * 86400 : 2 * 86400)]);   // só marca como enviado se pelo menos um aparelho recebeu
     }
     await kv(['LPUSH', KEYS.log, JSON.stringify({ quando: new Date().toISOString(), tipo, hoje, mensagens: msgs.length, enviados, repetidos, removidos, falhas })]);
     await kv(['LTRIM', KEYS.log, '0', '99']);
-    res.status(200).json({ ok: true, tipo, hoje, ...info, mensagens: msgs.length, enviados, repetidos, removidos, falhas, semAparelho });
+    res.status(200).json({ ok: true, tipo, hoje, teste, ...info, mensagens: msgs.length, enviados, repetidos, removidos, falhas, semAparelho });
   } catch (e) {
     res.status(500).json({ error: String((e && e.message) || e) });
   }

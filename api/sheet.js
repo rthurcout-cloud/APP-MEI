@@ -1,11 +1,18 @@
 // Baixa a planilha do Google Drive (xlsx compartilhado por link) e devolve os bytes.
 // Serve de "ponte" (proxy) porque o navegador não consegue baixar do Google direto (CORS).
-// Protegido pelo mesmo ACCESS_CODE do resto do app.
+// Protegido: exige sessão de administrador (x-token) e, se existir, o ACCESS_CODE.
+
+const { lerDados } = require('./_util');
+const { usuarioDaSessao } = require('./_auth');
 
 module.exports = async (req, res) => {
   const required = process.env.ACCESS_CODE || '';
   const sent = req.headers['x-access-code'] || '';
   if (required && sent !== required) { res.status(401).json({ error: 'codigo_invalido' }); return; }
+
+  // só administrador logado usa a ponte da planilha (antes qualquer pessoa podia usar)
+  try { const quem = usuarioDaSessao(req, await lerDados()); if (!quem || quem.papel !== 'admin') { res.status(401).json({ error: 'login_necessario' }); return; } }
+  catch (e) { res.status(500).json({ error: String((e && e.message) || e) }); return; }
 
   const id = (req.query && req.query.id) ? String(req.query.id) : '';
   if (!/^[a-zA-Z0-9_-]{20,}$/.test(id)) { res.status(400).json({ error: 'id_invalido' }); return; }
