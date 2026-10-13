@@ -1,5 +1,15 @@
 {
   "framework": null,
   "buildCommand": "echo sem build necessario",
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "crons": [
+    {
+      "path": "/api/avisos?tipo=agenda",
+      "schedule": "0 23 1 * *"
+    },
+    {
+      "path": "/api/avisos?tipo=lembrete",
+      "schedule": "0 22 * * *"
+    }
+  ]
 }

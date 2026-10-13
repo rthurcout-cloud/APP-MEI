@@ -466,6 +466,11 @@
       <span id="syncM" class="sync" style="margin-left:auto">…</span>
     </div>
     <div class="page-wrap">
+      <div class="card" id="cardAvisos" style="display:none;margin:0 0 14px">
+        <div style="font-weight:700;margin-bottom:4px">🔔 Avisos no celular</div>
+        <div class="hint" id="avisosTexto" style="margin:0 0 10px"></div>
+        <button class="btn" id="btnAvisos" onclick="alternarAvisos()">Ativar avisos</button>
+      </div>
       <div class="page-head">
         <span class="page-ic" id="pageIcon" aria-hidden="true"></span>
         <div>
@@ -581,16 +586,20 @@
 <!-- MODAL RENOMEAR EVENTO -->
 <div class="overlay" id="overlayEvento">
   <div class="modal" style="max-width:440px">
-    <h2 id="evTitulo">✏️ Nome do evento</h2>
+    <h2 id="evTitulo">✏️ Evento</h2>
     <input type="hidden" id="evDiaId"><input type="hidden" id="evNovaData">
     <div class="hint" style="margin-top:0" id="evData"></div>
     <div class="field" style="margin-top:12px"><label>Como esse evento aparece na agenda</label>
       <input id="evNome" placeholder="Ex.: Culto, Ensaio, Deboras, Restaurando Vidas..." onkeydown="if(event.key==='Enter')salvarEvento()">
     </div>
+    <div class="field"><label>Horário do evento (opcional)</label>
+      <input type="time" id="evHora">
+      <div class="hint" style="margin-top:6px">Aparece no aviso que a pessoa escalada recebe na véspera.</div>
+    </div>
     <div class="modal-actions">
       <button class="btn danger" id="evExcluir" onclick="excluirEvento()" style="margin-right:auto;display:none">Excluir</button>
       <button class="btn secondary" onclick="closeEvento()">Cancelar</button>
-      <button class="btn" id="evSalvar" onclick="salvarEvento()">Salvar nome</button>
+      <button class="btn" id="evSalvar" onclick="salvarEvento()">Salvar</button>
     </div>
   </div>
 </div>
@@ -1293,8 +1302,9 @@ function openEvento(diaId){
   const p=(d.data||'--').split('-');
   document.getElementById('evData').textContent=(p[2]||'?')+'/'+(p[1]||'?')+' · '+esc((d.diaSemana||diaSemanaPT(d.data)||''));
   document.getElementById('evNome').value=d.evento||'';
-  document.getElementById('evTitulo').textContent='✏️ Nome do evento';
-  document.getElementById('evSalvar').textContent='Salvar nome';
+  document.getElementById('evHora').value=d.hora||'';
+  document.getElementById('evTitulo').textContent='✏️ Evento';
+  document.getElementById('evSalvar').textContent='Salvar';
   document.getElementById('evExcluir').style.display='';
   document.getElementById('overlayEvento').classList.add('open');
   setTimeout(()=>{ const i=document.getElementById('evNome'); i.focus(); i.select(); },60);
@@ -1306,6 +1316,7 @@ function novoEvento(iso){
   const p=(iso||'--').split('-');
   document.getElementById('evData').textContent=(p[2]||'?')+'/'+(p[1]||'?')+' · '+esc(diaSemanaPT(iso)||'');
   document.getElementById('evNome').value='';
+  document.getElementById('evHora').value='';
   document.getElementById('evTitulo').textContent='➕ Novo evento';
   document.getElementById('evSalvar').textContent='Adicionar evento';
   document.getElementById('evExcluir').style.display='none';
@@ -1315,11 +1326,12 @@ function novoEvento(iso){
 function closeEvento(){ document.getElementById('overlayEvento').classList.remove('open'); }
 function salvarEvento(){
   const nome=document.getElementById('evNome').value.trim();
+  const hora=document.getElementById('evHora').value||'';
   const mes=mesById(mesAtualId); if(!mes) return;
   const id=document.getElementById('evDiaId').value;
   const nova=document.getElementById('evNovaData').value;
-  if(id){ const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return; d.evento=nome; }
-  else if(nova){ if(!nome){ document.getElementById('evNome').focus(); return; } if(!mes.dias) mes.dias=[]; mes.dias.push({id:uid('d'), data:nova, diaSemana:diaSemanaPT(nova), evento:nome, escala:[], reg:{}}); }
+  if(id){ const d=(mes.dias||[]).find(x=>x.id===id); if(!d) return; d.evento=nome; if(hora) d.hora=hora; else delete d.hora; }
+  else if(nova){ if(!nome){ document.getElementById('evNome').focus(); return; } if(!mes.dias) mes.dias=[]; mes.dias.push({id:uid('d'), data:nova, diaSemana:diaSemanaPT(nova), evento:nome, escala:[], reg:{}}); if(hora) mes.dias[mes.dias.length-1].hora=hora; }
   else return;
   save(); closeEvento(); renderAgenda();
 }
@@ -1651,6 +1663,51 @@ function renderEmConstrucao(v){
   const desc={ ponto:'Bater ponto: cada funcionário registra entrada e saída em tempo real, e o sistema calcula as horas automaticamente.', confirmacoes:'Confirmação de presença: cada pessoa confirma se vai ao evento; o painel mostra quem confirmou, quem não bateu ponto e quem faltou.', relatorios:'Relatórios: exportar horas e pagamento por período (PDF/planilha), por funcionário ou por evento.', funcoes:'Funções: cadastrar os papéis da equipe (Som, Transmissão, Projeção...) e atribuir a cada pessoa na escala.', config:'Configurações: definir código de acesso, nome da igreja, regras de hora extra e preferências.' };
   el.innerHTML=`<div class="card" style="text-align:center; padding:50px 24px"><div style="font-size:46px">🚧</div><h2 style="margin:10px 0 6px">${esc(t[0])} — em construção</h2><p style="color:var(--muted); max-width:520px; margin:0 auto">${esc(desc[v]||'')}</p><div style="margin-top:18px"><button class="btn secondary" onclick="navegar('dashboard')">Voltar ao Dashboard</button></div></div>`;
 }
+
+
+/* ---------- Avisos no celular (agenda do mês e evento de amanhã) ---------- */
+function b64ParaBytes(b64){ const pad='='.repeat((4-b64.length%4)%4), raw=atob((b64+pad).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(raw,c=>c.charCodeAt(0)); }
+const ehIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const appInstalado=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+async function enviarInscricao(sub){
+  const r=await fetch('/api/push',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({funcId:usuarioAtual.funcId,subscription:sub.toJSON()})});
+  if(!r.ok) throw new Error('o servidor recusou ('+r.status+')');
+  try{ localStorage.setItem('bh-push-func',usuarioAtual.funcId); }catch(e){}
+}
+async function estadoAvisos(){
+  const card=document.getElementById('cardAvisos'), txt=document.getElementById('avisosTexto'), btn=document.getElementById('btnAvisos');
+  if(!card||!usuarioAtual||!usuarioAtual.funcId){ if(card) card.style.display='none'; return; }       // só quem é funcionário recebe avisos
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
+    card.style.display=''; btn.style.display='none';
+    txt.textContent=ehIOS&&!appInstalado?'No iPhone, primeiro adicione o app à Tela de Início (Compartilhar > Adicionar à Tela de Início) e abra por lá. Aí dá pra ativar os avisos.':'Este navegador não recebe avisos no celular.'; return;
+  }
+  if(Notification.permission==='denied'){ card.style.display=''; btn.style.display='none'; txt.textContent='Os avisos estão bloqueados. Libere nas configurações do navegador pra este site.'; return; }
+  const reg=await navigator.serviceWorker.ready, sub=await reg.pushManager.getSubscription();
+  if(sub){
+    card.style.display='none';                                                                      // já ativado: some a mensagem
+    let antigo=''; try{ antigo=localStorage.getItem('bh-push-func')||''; }catch(e){}
+    if(antigo!==usuarioAtual.funcId){ try{ await enviarInscricao(sub); }catch(e){} }                 // outra pessoa entrou neste aparelho: passa a avisar ela
+    return;
+  }
+  card.style.display=''; btn.style.display=''; btn.disabled=false;
+  txt.textContent='Receba uma mensagem no celular no dia 1º de cada mês pra preencher a agenda, e na véspera de cada evento em que você estiver escalado.';
+}
+async function alternarAvisos(){
+  const btn=document.getElementById('btnAvisos'), txt=document.getElementById('avisosTexto'); btn.disabled=true;
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ txt.textContent='Sem permissão, não dá pra mandar avisos.'; btn.disabled=false; return; }
+    const reg=await navigator.serviceWorker.ready;
+    const chave=(await (await fetch('/api/push')).json()).publicKey;
+    if(!chave) throw new Error('avisos ainda não configurados no servidor');
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ParaBytes(chave)});
+    try{ await enviarInscricao(sub); }catch(e){ await sub.unsubscribe(); throw e; }
+    await estadoAvisos();
+  }catch(e){ txt.textContent='Não consegui ativar os avisos: '+(e.message||e); btn.disabled=false; }
+}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+{ const _ap=aplicarPermissoes; aplicarPermissoes=function(){ const r=_ap.apply(this,arguments); setTimeout(()=>{ estadoAvisos().catch(()=>{}); },0); return r; }; }
 
 /* ---------- Init ---------- */
 (async function boot(){
