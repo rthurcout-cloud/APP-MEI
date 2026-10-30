@@ -1677,22 +1677,16 @@ async function enviarInscricao(sub){
   try{ localStorage.setItem('bh-push-func',usuarioAtual.funcId); }catch(e){}
 }
 async function estadoAvisos(){
-  const card=document.getElementById('cardAvisos'), txt=document.getElementById('avisosTexto'), btn=document.getElementById('btnAvisos');
-  if(!card||!usuarioAtual||!usuarioAtual.funcId){ if(card) card.style.display='none'; return; }       // só quem é funcionário recebe avisos
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
-    card.style.display=''; btn.style.display='none';
-    txt.textContent=ehIOS&&!appInstalado?'No iPhone, primeiro adicione o app à Tela de Início (Compartilhar > Adicionar à Tela de Início) e abra por lá. Aí dá pra ativar os avisos.':'Este navegador não recebe avisos no celular.'; return;
-  }
-  if(Notification.permission==='denied'){ card.style.display=''; btn.style.display='none'; txt.textContent='Os avisos estão bloqueados. Libere nas configurações do navegador pra este site.'; return; }
-  const reg=await navigator.serviceWorker.ready, sub=await reg.pushManager.getSubscription();
-  if(sub){
-    card.style.display='none';                                                                      // já ativado: some a mensagem
+  // 29/10/2026: o card "Avisos no celular" foi retirado a pedido do Arthur (aparecia "Registration failed - push service error" em alguns aparelhos).
+  // Quem já tinha ativado continua recebendo; só não aparece mais nada na tela.
+  const card=document.getElementById('cardAvisos'); if(card) card.style.display='none';
+  if(!usuarioAtual||!usuarioAtual.funcId||!('serviceWorker' in navigator)||!('PushManager' in window)) return;
+  try{
+    const reg=await navigator.serviceWorker.ready, sub=await reg.pushManager.getSubscription();
+    if(!sub) return;
     let antigo=''; try{ antigo=localStorage.getItem('bh-push-func')||''; }catch(e){}
     if(antigo!==usuarioAtual.funcId){ try{ await enviarInscricao(sub); }catch(e){} }                 // outra pessoa entrou neste aparelho: passa a avisar ela
-    return;
-  }
-  card.style.display=''; btn.style.display=''; btn.disabled=false;
-  txt.textContent='Receba uma mensagem no celular no dia 1º de cada mês pra preencher a agenda, e na véspera de cada evento em que você estiver escalado.';
+  }catch(e){}
 }
 async function alternarAvisos(){
   const btn=document.getElementById('btnAvisos'), txt=document.getElementById('avisosTexto'); btn.disabled=true;
